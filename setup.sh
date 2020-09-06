@@ -97,6 +97,7 @@ brew install terraform
 
 echo "Setup netdata"
 brew install netdata
+brew services start netdata
 
 echo "Setup minikube"
 brew install minikube
