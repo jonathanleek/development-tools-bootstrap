@@ -1,8 +1,9 @@
+#!/bin/zsh
 # setup development environment
 # os x catalina 10.15
 # michael orlando
 
-echo "Setup.sh required xcode to be installed"
+echo "Setup.sh requires xcode to be installed"
 
 echo "Setup homebrew"
 which -s brew
@@ -43,10 +44,15 @@ brew install pyenv
 echo "Setup jenv to manage SYSTEM java versions"
 brew install jenv
 
-echo "install SDKMan for Java JVMs"
-curl -s "https://get.sdkman.io" | zsh
-
-source ~/.sdkman/bin/sdkman-init.sh
+echo "Setup SDKMan for Java JVMs"
+which -s sdk
+if [[ $? != 0 ]] ; then
+    echo "Installing SDKMan"
+    curl -s "https://get.sdkman.io" | zsh
+    source ~/.sdkman/bin/sdkman-init.sh
+else
+    echo "SDKMan exists, no updating or installing"
+fi
 
 brew install kubectl
 
