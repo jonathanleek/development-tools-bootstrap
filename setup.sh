@@ -40,8 +40,13 @@ brew install awscli@2
 echo "Setup pyenv to manage system and context python versions"
 brew install pyenv
 
-echo "Setup jenc to manage SYSTEM java versions"
+echo "Setup jenv to manage SYSTEM java versions"
 brew install jenv
+
+echo "install SDKMan for Java JVMs"
+curl -s "https://get.sdkman.io" | zsh
+
+source ~/.sdkman/bin/sdkman-init.sh
 
 brew install kubectl
 
@@ -95,3 +100,4 @@ pip install glances
 
 echo "Setup fluxctl"
 brew install fluxctl
+
