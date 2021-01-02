@@ -108,3 +108,5 @@ pip install glances
 echo "Setup fluxctl"
 brew install fluxctl
 
+echo "Setup Go"
+brew install go
