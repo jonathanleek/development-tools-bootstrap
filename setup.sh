@@ -5,6 +5,9 @@
 
 echo "Setup.sh requires xcode to be installed"
 
+echo "Checking Xcode CLI tools"
+xcode-select --install
+
 echo "Setup homebrew"
 which -s brew
 if [[ $? != 0 ]] ; then
@@ -12,6 +15,7 @@ if [[ $? != 0 ]] ; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 else
     echo "Updating homebrew"
+    git -C /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core fetch --unshallow
     brew update
     brew upgrade
     brew cleanup
