@@ -65,16 +65,16 @@ brew install weaveworks/tap/eksctl
 
 brew install helm@3
 
-brew cask install lens
+brew install lens
 
 brew install jq
 
 echo "Setup nerd fonts to get powerline fonts"
 brew tap homebrew/cask-fonts
-brew cask install font-hack-nerd-font
+brew install font-hack-nerd-font
 
 echo "Setup iterm2 to get powerline fonts"
-brew cask install iterm2
+brew install iterm2
 
 echo "Setup powerlevel10k for theme"
 brew install romkatv/powerlevel10k/powerlevel10k
@@ -84,6 +84,7 @@ brew install romkatv/powerlevel10k/powerlevel10k
 
 #set default python
 pyenv install 3.8.3
+pyenv rehash
 pyenv global 3.8.3
 
 echo "Setup pip"
@@ -91,13 +92,18 @@ which -s pip
 if [[ $? != 0 ]] ; then
     echo "Installing pip"
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    python get-pip.py
 else
     echo "Upgrading pip"
     pip install --upgrade pip
 fi
 
-echo "Setup terraform"
-brew install terraform
+echo "Setup tfenv"
+brew install tfenv
+
+echo "Setup version pinned terraform using tfenv"
+tfenv install 0.14.9
+tfenv use 0.14.9
 
 echo "Setup netdata"
 brew install netdata
