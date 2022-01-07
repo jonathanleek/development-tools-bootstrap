@@ -101,3 +101,21 @@ brew install --cask bitwarden
 
 echo "Install Brave"
 brew install --cask brave-browser
+
+echo "Install Sublime-Text"
+brew install --cask sublime-text
+
+echo "Install AppCleaner"
+brew install --cask appcleaner
+
+echo "Install git"
+brew install git
+
+echo "Install CheatSheet"
+brew install --cask cheatsheet
+
+echo "Install Microsoft Office"
+brew install --cask microsoft-office
+
+echo "Install iStat Menus"
+brew install --cask istat-menus
