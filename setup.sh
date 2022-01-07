@@ -1,7 +1,7 @@
 #!/bin/zsh
 # setup development environment
 # os x catalina 10.15
-# michael orlando
+# jonathan leek
 
 echo "Setup.sh requires xcode to be installed"
 
@@ -24,50 +24,11 @@ fi
 echo "Setup ohmyzsh"
 /bin/bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
-echo "Setup nvm (node version manager)"
-which -s nvm
-if [[ $? != 0 ]] ; then
-    echo "Installing nvm"
-    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.0/install.sh | bash
-    export NVM_DIR="/Users/michaelorlando/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-else
-    echo "nvm exists, no updating or installing"
-fi
-
-echo "Setup and use LTS version of nodejs using nvm"
-nvm install --lts
-nvm use --lts
-
 echo "Setup amazon web services aws cli version 2"
 brew install awscli@2
 
 echo "Setup pyenv to manage system and context python versions"
 brew install pyenv
-
-echo "Setup jenv to manage SYSTEM java versions"
-brew install jenv
-
-echo "Setup SDKMan for Java JVMs"
-which -s sdk
-if [[ $? != 0 ]] ; then
-    echo "Installing SDKMan"
-    curl -s "https://get.sdkman.io" | zsh
-    source ~/.sdkman/bin/sdkman-init.sh
-else
-    echo "SDKMan exists, no updating or installing"
-fi
-
-brew install kubectl
-
-brew tap weaveworks/tap
-brew install weaveworks/tap/eksctl
-
-brew install helm@3
-
-brew install lens
-
-brew install jq
 
 echo "Setup nerd fonts to get powerline fonts"
 brew tap homebrew/cask-fonts
@@ -105,18 +66,38 @@ echo "Setup version pinned terraform using tfenv"
 tfenv install 0.14.9
 tfenv use 0.14.9
 
-echo "Setup netdata"
-brew install netdata
-brew services start netdata
+echo "Setup Mac App Store Commandline Interface"
+brew install mas
 
-echo "Setup minikube"
-brew install minikube
+echo "Install Slack from App Store"
+mas lucky Slack
 
-echo "Setup glances"
-pip install glances
+echo "Install Termius from App Store"
+mas lucky Termius
 
-echo "Setup fluxctl"
-brew install fluxctl
+echo "Install Magnet from App Store"
+mas lucky Magnet
 
-echo "Setup Go"
-brew install go
+echo "Install Fantastical from App Store"
+mas lucky Fantastical
+
+echo "Install Bitwaden from App Store"
+mas lucky Bitwarden
+
+echo "Install Jetbrains Toolbox"
+brew install --cask jetbrains-toolbox
+
+echo "Install Arq Backup"
+brew install --cask arq
+
+echo "Install MacUpdater"
+brew install --cask macupdater
+
+echo "Install Authy"
+brew install --cask authy
+
+echo "Install Bitwarden"
+brew install --cask bitwarden
+
+echo "Install Brave"
+brew install --cask brave-browser
