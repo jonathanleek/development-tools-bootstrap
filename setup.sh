@@ -4,7 +4,10 @@
 # Jonathan Leek
 #
 # Idempotent: safe to re-run. Package list lives in ./Brewfile,
-# dotfiles in ./dotfiles, helper scripts in ./scripts.
+# helper scripts in ./scripts.
+#
+# NOTE: shell dotfiles (.zshrc etc.) are intentionally NOT managed here yet —
+# set those up on the new machine and add them to the repo later.
 
 set -euo pipefail
 
@@ -50,6 +53,11 @@ elif [[ -x /usr/local/bin/brew ]]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
 
+# Persist brew for future login shells
+if ! grep -q 'brew shellenv' "$HOME/.zprofile" 2>/dev/null; then
+  print 'eval "$('"$(command -v brew)"' shellenv)"' >> "$HOME/.zprofile"
+fi
+
 log "Updating Homebrew..."
 brew update
 brew upgrade
@@ -64,14 +72,7 @@ brew bundle --file "$SCRIPT_DIR/Brewfile" || \
 brew cleanup
 
 # ---------------------------------------------------------------------------
-# 5. Dotfiles (symlink .zshrc/.zprofile/.gitconfig/etc. into $HOME)
-#    Do this BEFORE Oh My Zsh so its installer keeps our .zshrc.
-# ---------------------------------------------------------------------------
-log "Linking dotfiles..."
-"$SCRIPT_DIR/scripts/link-dotfiles.sh"
-
-# ---------------------------------------------------------------------------
-# 6. Oh My Zsh (keep our .zshrc, don't relaunch a subshell)
+# 5. Oh My Zsh + powerlevel10k prompt
 # ---------------------------------------------------------------------------
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   log "Installing Oh My Zsh..."
@@ -79,9 +80,29 @@ if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
+if ! grep -q 'powerlevel10k.zsh-theme' "$HOME/.zshrc" 2>/dev/null; then
+  log "Enabling powerlevel10k in .zshrc..."
+  {
+    print ''
+    print '# powerlevel10k'
+    print "source $(brew --prefix)/opt/powerlevel10k/powerlevel10k.zsh-theme"
+  } >> "$HOME/.zshrc"
+fi
+
 # ---------------------------------------------------------------------------
-# 7. Python via pyenv (latest stable release; .zshrc already inits pyenv)
+# 6. Python via pyenv (latest stable release)
 # ---------------------------------------------------------------------------
+if ! grep -q 'pyenv init' "$HOME/.zshrc" 2>/dev/null; then
+  log "Adding pyenv init to .zshrc..."
+  cat >> "$HOME/.zshrc" <<'EOF'
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+EOF
+fi
+
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
@@ -96,26 +117,26 @@ if [[ -n "$PY_LATEST" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Terraform via tfenv (latest stable)
+# 7. Terraform via tfenv (latest stable)
 # ---------------------------------------------------------------------------
 log "Installing latest Terraform via tfenv..."
 tfenv install latest
 tfenv use latest
 
 # ---------------------------------------------------------------------------
-# 9. Start background services
+# 8. Start background services
 # ---------------------------------------------------------------------------
 log "Starting ollama service..."
 brew services start ollama || true
 
 # ---------------------------------------------------------------------------
-# 10. macOS system defaults
+# 9. macOS system defaults
 # ---------------------------------------------------------------------------
 log "Applying macOS defaults..."
 "$SCRIPT_DIR/scripts/macos.sh"
 
 # ---------------------------------------------------------------------------
-# 11. SSH key + GitHub (interactive-ish; safe to skip and run later)
+# 10. SSH key + GitHub (safe to skip and run later)
 # ---------------------------------------------------------------------------
 log "Bootstrapping SSH key..."
 "$SCRIPT_DIR/scripts/bootstrap-keys.sh" || \
@@ -128,7 +149,7 @@ log "Setup complete."
 print -P "%F{yellow}Next steps:%f"
 print "  1. Open a NEW terminal window (so brew/pyenv/prompt load)."
 print "  2. Run: p10k configure   (creates ~/.p10k.zsh for the prompt)"
-print "  3. Fill in ~/.zsh_secrets from Bitwarden (API keys, tokens)."
+print "  3. Set up your shell dotfiles (.zshrc etc.) and any API keys."
 print "  4. Sign into the App Store, then re-run: brew bundle   (Fantastical / Magnet / etc.)"
 print "  5. Manual installs (no cask): Meshmixer, RevoScan5, Blueprint Studio,"
 print "     TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect."

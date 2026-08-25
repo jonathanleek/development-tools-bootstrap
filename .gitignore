@@ -8,8 +8,7 @@
 out
 gen
 
-# Secrets — never commit real ones (the .example template is committed)
+# Secrets — never commit real ones
 .zsh_secrets
 *.pem
 id_ed25519*
-!dotfiles/.zsh_secrets.example
