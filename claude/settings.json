@@ -1,0 +1,19 @@
+{
+  "enabledPlugins": {
+    "astronomer-data@astronomer": true
+  },
+  "tui": "fullscreen",
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  },
+  "permissions": {
+    "allow": [
+      "mcp__fusion__fusion_mcp_read",
+      "mcp__conductor__GetWorkspaceDiff",
+      "Bash(brew info *)",
+      "Bash(brew search *)",
+      "Bash(dscacheutil *)"
+    ]
+  }
+}

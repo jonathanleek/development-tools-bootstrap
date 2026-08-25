@@ -12,6 +12,7 @@
 # ===========================================================================
 brew "git"
 brew "gh"                                         # GitHub CLI
+brew "jq"                                         # JSON processor (used by the Claude statusline)
 brew "mas"                                        # Mac App Store CLI
 brew "node"
 brew "just"                                       # command runner

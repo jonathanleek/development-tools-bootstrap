@@ -156,6 +156,13 @@ log "Setting up vaults..."
   log "Vault setup incomplete (GitHub auth?) — run scripts/vaults.sh later"
 
 # ---------------------------------------------------------------------------
+# 13. Reproduce the Claude Code environment (plugins, skills, config)
+# ---------------------------------------------------------------------------
+log "Setting up Claude Code environment..."
+"$SCRIPT_DIR/scripts/claude-env.sh" || \
+  log "Claude env setup incomplete — run scripts/claude-env.sh later"
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 log "Setup complete."
