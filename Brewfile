@@ -14,6 +14,7 @@ brew "git"
 brew "gh"                                         # GitHub CLI
 brew "jq"                                         # JSON processor (used by the Claude statusline)
 brew "mas"                                        # Mac App Store CLI
+brew "bitwarden-cli"                               # `bw` — secret backup/restore
 brew "node"
 brew "just"                                       # command runner
 brew "pre-commit"                                 # git hook framework
