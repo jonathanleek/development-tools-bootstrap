@@ -6,10 +6,10 @@ set -euo pipefail
 GIT_ROOT="$HOME/Documents/git"
 ORGS=(
   personal
-  westboundworkshop
+  westbound-workshop
   astronomer
   apache
-  arch_reactor
+  arch-reactor
 )
 
 for org in $ORGS; do

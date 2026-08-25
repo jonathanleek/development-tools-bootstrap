@@ -149,6 +149,13 @@ log "Bootstrapping SSH key..."
   log "Key bootstrap skipped/failed — run scripts/bootstrap-keys.sh later"
 
 # ---------------------------------------------------------------------------
+# 12. Clone Obsidian/data vaults (needs GitHub auth from step 11)
+# ---------------------------------------------------------------------------
+log "Setting up vaults..."
+"$SCRIPT_DIR/scripts/vaults.sh" || \
+  log "Vault setup incomplete (GitHub auth?) — run scripts/vaults.sh later"
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 log "Setup complete."
