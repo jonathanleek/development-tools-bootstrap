@@ -142,21 +142,29 @@ log "Applying macOS defaults..."
 "$SCRIPT_DIR/scripts/macos.sh"
 
 # ---------------------------------------------------------------------------
-# 11. SSH key + GitHub (safe to skip and run later)
+# 11. Restore secrets from Bitwarden (SSH keys, gh token, homelab secrets)
+#     Runs before key/vault steps so restored GitHub auth is available.
+# ---------------------------------------------------------------------------
+log "Restoring secrets from Bitwarden..."
+"$SCRIPT_DIR/scripts/restore-secrets.sh" || \
+  log "Secret restore skipped — run scripts/restore-secrets.sh later"
+
+# ---------------------------------------------------------------------------
+# 12. SSH key + GitHub (reuses a restored key if present; else generates one)
 # ---------------------------------------------------------------------------
 log "Bootstrapping SSH key..."
 "$SCRIPT_DIR/scripts/bootstrap-keys.sh" || \
   log "Key bootstrap skipped/failed — run scripts/bootstrap-keys.sh later"
 
 # ---------------------------------------------------------------------------
-# 12. Clone Obsidian/data vaults (needs GitHub auth from step 11)
+# 13. Clone Obsidian/data vaults (needs GitHub auth from steps 11-12)
 # ---------------------------------------------------------------------------
 log "Setting up vaults..."
 "$SCRIPT_DIR/scripts/vaults.sh" || \
   log "Vault setup incomplete (GitHub auth?) — run scripts/vaults.sh later"
 
 # ---------------------------------------------------------------------------
-# 13. Reproduce the Claude Code environment (plugins, skills, config)
+# 14. Reproduce the Claude Code environment (plugins, skills, config)
 # ---------------------------------------------------------------------------
 log "Setting up Claude Code environment..."
 "$SCRIPT_DIR/scripts/claude-env.sh" || \

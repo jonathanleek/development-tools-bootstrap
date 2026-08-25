@@ -12,6 +12,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `Brewfile` | All CLI tools, apps, fonts, and App Store apps (`brew bundle`) |
 | `scripts/macos.sh` | Sensible macOS system defaults (`defaults write`) |
 | `scripts/bootstrap-keys.sh` | Generates an SSH key and registers it with GitHub |
+| `scripts/restore-secrets.sh` | Restores secrets from Bitwarden (pulls + runs the stored `restore-script` note) |
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, skills, config) |
@@ -32,9 +33,19 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 8. Creates the `~/Documents/git/<org>/` directory structure.
 9. Starts the `ollama` service.
 10. Applies macOS defaults.
-11. Generates an SSH key and adds it to GitHub (via `gh`).
-12. Clones the Obsidian/data vaults and registers them with Obsidian.
-13. Reproduces the Claude Code environment.
+11. Restores secrets from Bitwarden (SSH keys, `gh` token, homelab secrets) — interactive.
+12. Generates an SSH key and adds it to GitHub (reuses a restored key if present).
+13. Clones the Obsidian/data vaults and registers them with Obsidian.
+14. Reproduces the Claude Code environment.
+
+### Secret restore (step 11)
+
+Requires `bw` (in the Brewfile) and that you previously stored a `restore-script`
+Secure Note in a Bitwarden "Mac Migration" folder. The step prompts for your
+Bitwarden login/unlock (never stored), pulls the note, and writes each secret to
+its real path with correct permissions. Skippable — Ctrl-C the prompt to defer.
+Terraform `.tfstate` files, WireGuard tunnels, and the Anthropic API key are
+**not** covered (move those manually).
 
 ## To run
 
