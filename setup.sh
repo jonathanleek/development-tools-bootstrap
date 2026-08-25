@@ -124,19 +124,25 @@ tfenv install latest
 tfenv use latest
 
 # ---------------------------------------------------------------------------
-# 8. Start background services
+# 8. Create directory structure
+# ---------------------------------------------------------------------------
+log "Creating directory structure..."
+"$SCRIPT_DIR/scripts/make-dirs.sh"
+
+# ---------------------------------------------------------------------------
+# 9. Start background services
 # ---------------------------------------------------------------------------
 log "Starting ollama service..."
 brew services start ollama || true
 
 # ---------------------------------------------------------------------------
-# 9. macOS system defaults
+# 10. macOS system defaults
 # ---------------------------------------------------------------------------
 log "Applying macOS defaults..."
 "$SCRIPT_DIR/scripts/macos.sh"
 
 # ---------------------------------------------------------------------------
-# 10. SSH key + GitHub (safe to skip and run later)
+# 11. SSH key + GitHub (safe to skip and run later)
 # ---------------------------------------------------------------------------
 log "Bootstrapping SSH key..."
 "$SCRIPT_DIR/scripts/bootstrap-keys.sh" || \
