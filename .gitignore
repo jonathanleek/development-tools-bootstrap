@@ -7,3 +7,9 @@
 *.iml
 out
 gen
+
+# Secrets — never commit real ones (the .example template is committed)
+.zsh_secrets
+*.pem
+id_ed25519*
+!dotfiles/.zsh_secrets.example
