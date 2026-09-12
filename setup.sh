@@ -1,121 +1,183 @@
 #!/bin/zsh
-# setup development environment
-# os x catalina 10.15
-# jonathan leek
+# Development environment bootstrap
+# Target: brand-new Apple Silicon Mac (arm64), macOS 15+/26
+# Jonathan Leek
+#
+# Idempotent: safe to re-run. Package list lives in ./Brewfile,
+# helper scripts in ./scripts.
+#
+# NOTE: shell dotfiles (.zshrc etc.) are intentionally NOT managed here yet —
+# set those up on the new machine and add them to the repo later.
 
-echo "Setup.sh requires xcode to be installed"
+set -euo pipefail
 
-echo "Checking Xcode CLI tools"
-xcode-select --install
+SCRIPT_DIR="${0:A:h}"
 
-echo "Setup homebrew"
-which -s brew
-if [[ $? != 0 ]] ; then
-    echo "Installing homebrew"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+log() { print -P "%F{cyan}==>%f $*"; }
+
+# ---------------------------------------------------------------------------
+# 1. Xcode Command Line Tools (blocking — homebrew needs these)
+# ---------------------------------------------------------------------------
+if ! xcode-select -p >/dev/null 2>&1; then
+  log "Installing Xcode Command Line Tools (a GUI dialog will appear)..."
+  xcode-select --install || true
+  log "Waiting for Xcode Command Line Tools to finish installing..."
+  until xcode-select -p >/dev/null 2>&1; do
+    sleep 15
+  done
 else
-    echo "Updating homebrew"
-    git -C /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core fetch --unshallow
-    brew update
-    brew upgrade
-    brew cleanup
+  log "Xcode Command Line Tools already installed"
 fi
 
-echo "Setup ohmyzsh"
-/bin/bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-
-echo "Setup amazon web services aws cli version 2"
-brew install awscli@2
-
-echo "Setup pyenv to manage system and context python versions"
-brew install pyenv
-
-echo "Setup nerd fonts to get powerline fonts"
-brew tap homebrew/cask-fonts
-brew install font-hack-nerd-font
-
-echo "Setup iterm2 to get powerline fonts"
-brew install iterm2
-
-echo "Setup powerlevel10k for theme"
-brew install romkatv/powerlevel10k/powerlevel10k
-
-# echo "Configure powerlevel10k"
-# p10k configure
-
-#set default python
-pyenv install 3.8.3
-pyenv rehash
-pyenv global 3.8.3
-
-echo "Setup pip"
-which -s pip
-if [[ $? != 0 ]] ; then
-    echo "Installing pip"
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-    python get-pip.py
-else
-    echo "Upgrading pip"
-    pip install --upgrade pip
+# ---------------------------------------------------------------------------
+# 2. Rosetta 2 (some casks are still x86-only)
+# ---------------------------------------------------------------------------
+if [[ "$(uname -m)" == "arm64" ]] && ! /usr/bin/pgrep -q oahd; then
+  log "Installing Rosetta 2..."
+  softwareupdate --install-rosetta --agree-to-license || true
 fi
 
-echo "Setup tfenv"
-brew install tfenv
+# ---------------------------------------------------------------------------
+# 3. Homebrew
+# ---------------------------------------------------------------------------
+if ! command -v brew >/dev/null 2>&1; then
+  log "Installing Homebrew..."
+  NONINTERACTIVE=1 /bin/bash -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
 
-echo "Setup version pinned terraform using tfenv"
-tfenv install 0.14.9
-tfenv use 0.14.9
+# Load brew into the current shell (Apple Silicon lives in /opt/homebrew)
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
 
-echo "Setup Mac App Store Commandline Interface"
-brew install mas
+# Persist brew for future login shells
+if ! grep -q 'brew shellenv' "$HOME/.zprofile" 2>/dev/null; then
+  print 'eval "$('"$(command -v brew)"' shellenv)"' >> "$HOME/.zprofile"
+fi
 
-echo "Install Slack from App Store"
-mas lucky Slack
+log "Updating Homebrew..."
+brew update
+brew upgrade
 
-echo "Install Termius from App Store"
-mas lucky Termius
+# ---------------------------------------------------------------------------
+# 4. Install everything from the Brewfile (idempotent)
+# ---------------------------------------------------------------------------
+log "Installing packages from Brewfile..."
+brew bundle --file "$SCRIPT_DIR/Brewfile" || \
+  log "Some Brewfile items failed (App Store items need you signed into the App Store first) — continuing"
 
-echo "Install Magnet from App Store"
-mas lucky Magnet
+brew cleanup
 
-echo "Install Fantastical from App Store"
-mas lucky Fantastical
+# ---------------------------------------------------------------------------
+# 5. Oh My Zsh + powerlevel10k prompt
+# ---------------------------------------------------------------------------
+if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+  log "Installing Oh My Zsh..."
+  RUNZSH=no KEEP_ZSHRC=yes sh -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+fi
 
-echo "Install Bitwaden from App Store"
-mas lucky Bitwarden
+if ! grep -q 'powerlevel10k.zsh-theme' "$HOME/.zshrc" 2>/dev/null; then
+  log "Enabling powerlevel10k in .zshrc..."
+  {
+    print ''
+    print '# powerlevel10k'
+    print "source $(brew --prefix)/opt/powerlevel10k/powerlevel10k.zsh-theme"
+  } >> "$HOME/.zshrc"
+fi
 
-echo "Install Jetbrains Toolbox"
-brew install --cask jetbrains-toolbox
+# ---------------------------------------------------------------------------
+# 6. Python via pyenv (latest stable release)
+# ---------------------------------------------------------------------------
+if ! grep -q 'pyenv init' "$HOME/.zshrc" 2>/dev/null; then
+  log "Adding pyenv init to .zshrc..."
+  cat >> "$HOME/.zshrc" <<'EOF'
 
-echo "Install Arq Backup"
-brew install --cask arq
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+EOF
+fi
 
-echo "Install MacUpdater"
-brew install --cask macupdater
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
 
-echo "Install Authy"
-brew install --cask authy
+PY_LATEST="$(pyenv install --list | grep -E '^[[:space:]]*3\.[0-9]+\.[0-9]+$' | tail -1 | tr -d '[:space:]')"
+if [[ -n "$PY_LATEST" ]]; then
+  log "Installing Python $PY_LATEST via pyenv..."
+  pyenv install -s "$PY_LATEST"
+  pyenv global "$PY_LATEST"
+  pyenv rehash
+  python -m pip install --upgrade pip
+fi
 
-echo "Install Bitwarden"
-brew install --cask bitwarden
+# ---------------------------------------------------------------------------
+# 7. Terraform via tfenv (latest stable)
+# ---------------------------------------------------------------------------
+log "Installing latest Terraform via tfenv..."
+tfenv install latest
+tfenv use latest
 
-echo "Install Brave"
-brew install --cask brave-browser
+# ---------------------------------------------------------------------------
+# 8. Create directory structure
+# ---------------------------------------------------------------------------
+log "Creating directory structure..."
+"$SCRIPT_DIR/scripts/make-dirs.sh"
 
-echo "Install Sublime-Text"
-brew install --cask sublime-text
+# ---------------------------------------------------------------------------
+# 9. Start background services
+# ---------------------------------------------------------------------------
+log "Starting ollama service..."
+brew services start ollama || true
 
-echo "Install AppCleaner"
-brew install --cask appcleaner
+# ---------------------------------------------------------------------------
+# 10. macOS system defaults
+# ---------------------------------------------------------------------------
+log "Applying macOS defaults..."
+"$SCRIPT_DIR/scripts/macos.sh"
 
-echo "Install git"
-brew install git
+# ---------------------------------------------------------------------------
+# 11. Restore secrets from Bitwarden (SSH keys, gh token, homelab secrets)
+#     Runs before key/vault steps so restored GitHub auth is available.
+# ---------------------------------------------------------------------------
+log "Restoring secrets from Bitwarden..."
+"$SCRIPT_DIR/scripts/restore-secrets.sh" || \
+  log "Secret restore skipped — run scripts/restore-secrets.sh later"
 
-echo "Install CheatSheet"
-brew install --cask cheatsheet
+# ---------------------------------------------------------------------------
+# 12. SSH key + GitHub (reuses a restored key if present; else generates one)
+# ---------------------------------------------------------------------------
+log "Bootstrapping SSH key..."
+"$SCRIPT_DIR/scripts/bootstrap-keys.sh" || \
+  log "Key bootstrap skipped/failed — run scripts/bootstrap-keys.sh later"
 
-echo "Install Microsoft Office"
-brew install --cask microsoft-office
+# ---------------------------------------------------------------------------
+# 13. Clone Obsidian/data vaults (needs GitHub auth from steps 11-12)
+# ---------------------------------------------------------------------------
+log "Setting up vaults..."
+"$SCRIPT_DIR/scripts/vaults.sh" || \
+  log "Vault setup incomplete (GitHub auth?) — run scripts/vaults.sh later"
 
-echo "Install iStat Menus"
-brew install --cask istat-menus
+# ---------------------------------------------------------------------------
+# 14. Reproduce the Claude Code environment (plugins, skills, config)
+# ---------------------------------------------------------------------------
+log "Setting up Claude Code environment..."
+"$SCRIPT_DIR/scripts/claude-env.sh" || \
+  log "Claude env setup incomplete — run scripts/claude-env.sh later"
+
+# ---------------------------------------------------------------------------
+# Done
+# ---------------------------------------------------------------------------
+log "Setup complete."
+print -P "%F{yellow}Next steps:%f"
+print "  1. Open a NEW terminal window (so brew/pyenv/prompt load)."
+print "  2. Run: p10k configure   (creates ~/.p10k.zsh for the prompt)"
+print "  3. Set up your shell dotfiles (.zshrc etc.) and any API keys."
+print "  4. Sign into the App Store, then re-run: brew bundle   (Fantastical / Magnet / etc.)"
+print "  5. Manual installs (no cask): Meshmixer, RevoScan5, Blueprint Studio,"
+print "     TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect."
