@@ -46,7 +46,7 @@ cask "docker-desktop"
 cask "claude"                                     # Claude desktop app
 cask "claude-code"                                # Claude Code CLI
 cask "conductor"                                  # Conductor (conductor.build)
-cask "lm-studio-bionic"                           # LM Studio Bionic — local model agent
+cask "lm-studio"                                  # LM Studio — run local LLMs
 
 # ===========================================================================
 # Browsers & communication
