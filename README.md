@@ -64,7 +64,11 @@ Reproduces the personal Claude setup:
 - Installs the `astronomer-data` plugin.
 - Re-applies a **narrowed** `airflow-skill-suggester` hook (the shipped one matches
   the fragment `"af"` and generic words, firing on unrelated prompts).
-- Clones `makerspace-claude-skills` and symlinks the `tool-advisor` skill.
+- Syncs each repo in `SKILL_SOURCES` (currently `claude-skills` for general skills
+  and `makerspace-claude-skills` for workshop skills) and symlinks every
+  `skills/<name>/` folder containing a `SKILL.md` into `~/.claude/skills/`.
+  Adding a skill is just a new folder in one of those repos; adding a repo is
+  one line in the array. Dangling links are pruned; nothing else is removed.
 - Installs `~/.claude/CLAUDE.md`, `~/.claude/statusline.sh`, and merges
   `~/.claude/settings.json` (statusline + read-only permission allowlist).
 

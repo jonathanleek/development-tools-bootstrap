@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Reproduce the Claude Code environment: plugin marketplaces, the astronomer-data
-# plugin, the narrowed airflow hook, personal skills, and ~/.claude config.
+# plugin, the narrowed airflow hook, skill repos, and ~/.claude config.
 # Idempotent. Needs the `claude` CLI (claude-code cask) and GitHub auth.
 set -euo pipefail
 
@@ -36,23 +36,54 @@ find "$CLAUDE_DIR/plugins/cache" -path '*skills/airflow/hooks/airflow-skill-sugg
   print "   patched $hook"
 done
 
-# 4. Personal skills repo + symlink tool-advisor
-SKILLS_REPO="$HOME/Documents/git/westbound-workshop/makerspace-claude-skills"
-if [[ -d "$SKILLS_REPO/.git" ]]; then
-  git -C "$SKILLS_REPO" pull --ff-only 2>/dev/null || true
-else
-  mkdir -p "${SKILLS_REPO:h}"
-  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    gh repo clone jonathanleek/makerspace-claude-skills "$SKILLS_REPO"
-  else
-    git clone git@github.com:jonathanleek/makerspace-claude-skills.git "$SKILLS_REPO" \
-      || git clone https://github.com/jonathanleek/makerspace-claude-skills.git "$SKILLS_REPO"
+# 4. Skill sources: clone/update each repo, then symlink every skills/<name>/
+#    folder that contains a SKILL.md into ~/.claude/skills/<name>.
+#    Format: "github-owner/repo-name|local-clone-path". First source wins on a
+#    name collision. Only dangling symlinks are ever removed from ~/.claude/skills.
+SKILL_SOURCES=(
+  "jonathanleek/claude-skills|$HOME/Documents/git/personal/claude-skills"
+  "jonathanleek/makerspace-claude-skills|$HOME/Documents/git/westbound-workshop/makerspace-claude-skills"
+)
+
+sync_repo() {  # sync_repo owner/name /local/path
+  local slug="$1" dest="$2"
+  if [[ -d "$dest/.git" ]]; then
+    git -C "$dest" pull -q --ff-only 2>/dev/null || true
+    return 0
   fi
-fi
-if [[ -d "$SKILLS_REPO/skills/tool-advisor" ]]; then
-  ln -sfn "$SKILLS_REPO/skills/tool-advisor" "$CLAUDE_DIR/skills/tool-advisor"
-  print "   linked tool-advisor"
-fi
+  mkdir -p "${dest:h}"
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    gh repo clone "$slug" "$dest" 2>/dev/null && return 0
+  fi
+  git clone "git@github.com:$slug.git" "$dest" 2>/dev/null \
+    || git clone "https://github.com/$slug.git" "$dest" 2>/dev/null \
+    || { print "   could not clone $slug — skipping"; return 1; }
+}
+
+log "Syncing skill sources..."
+typeset -A linked
+for entry in "${SKILL_SOURCES[@]}"; do
+  slug="${entry%%|*}"; dest="${entry#*|}"
+  sync_repo "$slug" "$dest" || continue
+  for skill_md in "$dest"/skills/*/SKILL.md(N); do
+    src="${skill_md:h}"; name="${src:t}"
+    if [[ -n "${linked[$name]:-}" ]]; then
+      print "   skip $name from $slug (already linked from ${linked[$name]})"
+      continue
+    fi
+    ln -sfn "$src" "$CLAUDE_DIR/skills/$name"
+    linked[$name]="$slug"
+    print "   linked $name <- $slug"
+  done
+done
+
+# Remove symlinks whose target no longer exists (skill deleted or repo moved).
+for link in "$CLAUDE_DIR"/skills/*(@N); do
+  if [[ ! -e "$link" ]]; then
+    rm "$link"
+    print "   removed dangling link ${link:t}"
+  fi
+done
 
 # 5. Config: CLAUDE.md + statusline (copy), settings.json (merge, don't clobber)
 log "Installing Claude config..."
