@@ -8,6 +8,12 @@
 #   UniFi Protect (direct download from ui.com, or use the web console)
 
 # ===========================================================================
+# Third-party taps
+# ===========================================================================
+tap "cordwainersmith/claudoscope"                 # Claudoscope (upstream author's tap)
+tap "migsilva89/loadout"                          # Loadout (upstream author's tap)
+
+# ===========================================================================
 # CLI tools (formulae)
 # ===========================================================================
 brew "git"
@@ -42,9 +48,11 @@ cask "iterm2"
 cask "sublime-text"
 cask "obsidian"
 cask "jetbrains-toolbox"                          # installs PyCharm, DataGrip, etc.
-cask "docker-desktop"
+cask "orbstack"                                   # Docker runtime + Linux VMs (Docker Desktop replacement)
 cask "claude"                                     # Claude desktop app
 cask "claude-code"                                # Claude Code CLI
+cask "cordwainersmith/claudoscope/claudoscope"    # Claude Code session dashboard
+cask "migsilva89/loadout/loadout"                 # Loadout — Claude Code skills/agents/MCP manager
 cask "conductor"                                  # Conductor (conductor.build)
 cask "lm-studio-bionic"                           # LM Studio Bionic — local model agent
 
