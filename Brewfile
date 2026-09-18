@@ -42,7 +42,7 @@ cask "iterm2"
 cask "sublime-text"
 cask "obsidian"
 cask "jetbrains-toolbox"                          # installs PyCharm, DataGrip, etc.
-cask "docker-desktop"
+cask "orbstack"                                   # Docker runtime + Linux VMs (Docker Desktop replacement)
 cask "claude"                                     # Claude desktop app
 cask "claude-code"                                # Claude Code CLI
 cask "conductor"                                  # Conductor (conductor.build)
