@@ -54,7 +54,7 @@ cask "claude-code"                                # Claude Code CLI
 cask "cordwainersmith/claudoscope/claudoscope"    # Claude Code session dashboard
 cask "migsilva89/loadout/loadout"                 # Loadout — Claude Code skills/agents/MCP manager
 cask "conductor"                                  # Conductor (conductor.build)
-cask "lm-studio-bionic"                           # LM Studio Bionic — local model agent
+cask "lm-studio"                                  # LM Studio — run local LLMs
 
 # ===========================================================================
 # Browsers & communication
