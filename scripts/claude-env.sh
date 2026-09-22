@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Reproduce the Claude Code environment: plugin marketplaces, the astronomer-data
 # plugin, the narrowed airflow hook, skill repos, and ~/.claude config.
-# Idempotent. Needs the `claude` CLI (claude-code cask) and GitHub auth.
+# Idempotent. Needs the `claude` CLI (native installer, ~/.local/bin) and GitHub auth.
 set -euo pipefail
 
 REPO="${0:A:h:h}"          # repo root (scripts/ is one level down)
@@ -10,7 +10,7 @@ CLAUDE_DIR="$HOME/.claude"
 log() { print -P "%F{cyan}==>%f $*"; }
 
 if ! command -v claude >/dev/null 2>&1; then
-  log "claude CLI not found (install the claude-code cask first) — skipping"
+  log "claude CLI not found (run the native installer: curl -fsSL https://claude.ai/install.sh | bash) — skipping"
   exit 0
 fi
 

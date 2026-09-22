@@ -50,7 +50,10 @@ cask "obsidian"
 cask "jetbrains-toolbox"                          # installs PyCharm, DataGrip, etc.
 cask "orbstack"                                   # Docker runtime + Linux VMs (Docker Desktop replacement)
 cask "claude"                                     # Claude desktop app
-cask "claude-code"                                # Claude Code CLI
+# NOTE: do NOT install the claude-code cask. It puts a second `claude` at
+# /opt/homebrew/bin, which wins in PATH over the self-updating native install
+# at ~/.local/bin and silently pins you to an old CLI. Install it with:
+#   curl -fsSL https://claude.ai/install.sh | bash
 cask "cordwainersmith/claudoscope/claudoscope"    # Claude Code session dashboard
 cask "migsilva89/loadout/loadout"                 # Loadout — Claude Code skills/agents/MCP manager
 cask "conductor"                                  # Conductor (conductor.build)

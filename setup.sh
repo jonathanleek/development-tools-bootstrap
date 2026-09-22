@@ -166,6 +166,20 @@ log "Setting up vaults..."
 # ---------------------------------------------------------------------------
 # 14. Reproduce the Claude Code environment (plugins, skills, config)
 # ---------------------------------------------------------------------------
+# Install the CLI with the native installer (NOT the Homebrew cask — a second
+# `claude` in /opt/homebrew/bin wins PATH precedence and pins you to a stale
+# version). The installer lands in ~/.local/bin and self-updates.
+if [[ ! -x "$HOME/.local/bin/claude" ]]; then
+  log "Installing Claude Code (native installer)..."
+  curl -fsSL https://claude.ai/install.sh | bash || log "Claude Code install failed — run it manually later"
+fi
+# ~/.local/bin must be on PATH in *login* shells too: GUI apps that spawn agents
+# (Termic, etc.) capture `zsh -l`, which reads .zprofile but never .zshrc.
+if ! grep -q '\.local/bin' "$HOME/.zprofile" 2>/dev/null; then
+  print 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zprofile"
+fi
+export PATH="$HOME/.local/bin:$PATH"
+
 log "Setting up Claude Code environment..."
 "$SCRIPT_DIR/scripts/claude-env.sh" || \
   log "Claude env setup incomplete — run scripts/claude-env.sh later"
