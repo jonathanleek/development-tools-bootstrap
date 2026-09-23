@@ -86,6 +86,9 @@ project-overrides/
 contexts/
 	home/                        applied when on the home network, see Contexts
 	away/
+machines/
+	mac-studio/                  applied on that machine only, see Machines
+	macbook-pro/
 ```
 
 Each layer folder holds any of these, all optional:
@@ -93,7 +96,8 @@ Each layer folder holds any of these, all optional:
 | File | Purpose |
 |---|---|
 | `AGENTS.md` | Instructions. Layers concatenate, top layer first. |
-| `skills/<name>/SKILL.md` | Skills. Layers union. On a name collision the deeper layer wins. |
+| `skills/<name>/SKILL.md` | Skills kept in this repo. Layers union. On a name collision the deeper layer wins. |
+| `skill_sources` in `policy.json` | Skill repos. Each `skills/<name>/` folder with a `SKILL.md` in the repo is linked in, same collision rule. |
 | `mcp.json` | MCP servers. Layers union. |
 | `policy.json` | Account, allowed models, and which contexts apply. A deeper layer can narrow the model list, not widen it. |
 | `claude/settings.json` | Claude Code settings, including permissions. Deep-merged, deeper layer wins. |
@@ -108,12 +112,19 @@ Each layer folder holds any of these, all optional:
 		"claude": ["claude-opus-5-5", "claude-sonnet-5"],
 		"opencode": ["anthropic/*", "lmstudio/openai/gpt-oss-120b"]
 	},
-	"contexts": ["home"]
+	"contexts": ["home"],
+	"skill_sources": ["jonathanleek/claude-skills"]
 }
 ```
 
 `contexts` lists the context groups the launcher evaluates for this layer. A
 layer that lists none runs no network probe.
+
+`skill_sources` lists GitHub repos. The launcher clones each one under
+`~/Documents/git/` on first use and links its skills into the set. This is what
+`scripts/claude-env.sh` does today with `SKILL_SOURCES`, per layer instead of
+for every project. `claude-skills` belongs in `shared`, so every domain gets it.
+`makerspace-claude-skills` belongs in `westbound-workshop`.
 
 The build turns `models.claude` into `availableModels` and `model` in the Claude
 settings, and `models.opencode` into `enabled_providers` and `model` in the
@@ -158,17 +169,23 @@ accounts, so it is known to work for Claude Code.
 
 `mi6 <tool> [args]` does this on every run:
 
-1. Resolve the layers, or take `MI6_DOMAIN`.
-2. Evaluate the contexts the merged `policy.json` lists, and add the matching
+1. Pull this repo and every skill repo the layers use, if the last pull is
+   more than an hour old. See Keeping two machines in sync.
+2. Resolve the layers, or take `MI6_DOMAIN`.
+3. Add the machine layer for this hostname, if one exists. See Machines.
+4. Evaluate the contexts the merged `policy.json` lists, and add the matching
    context layer on top. See Contexts.
-3. Build or refresh the config set. A refresh compares symlink targets and
+5. Build or refresh the config set. A refresh compares symlink targets and
    takes well under a second. It also creates the set the first time a new
    customer folder is used.
-4. Sync plugins and MCP servers if the merged list changed.
-5. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`.
-6. `exec` the real tool with the remaining arguments.
+6. Sync plugins and MCP servers if the merged list changed.
+7. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`.
+8. `exec` the real tool with the remaining arguments.
 
-`mi6 --no-domain <tool>` skips steps 1 to 5 and starts the tool with plain
+Layers merge in this order, later wins: `shared`, the domain path from the top
+down, the machine, the context.
+
+`mi6 --no-domain <tool>` skips steps 1 to 7 and starts the tool with plain
 user config. Use it to repair a broken `meta` config.
 
 Termic's agent registry runs `mi6 claude` and `mi6 opencode` in place of the
@@ -266,6 +283,69 @@ the same probe before each prompt and adds one line of context, for example
 `network: away, homelab unreachable`, or `network: home-lan, proxmox-1 not
 answering on 8006`. The probe takes well under a second. OpenCode's plugin hooks
 are checked for an equivalent.
+
+## Machines: config that depends on the hardware
+
+The Mac Studio and the MacBook Pro run the same config repo, but they are not
+the same machine. The Studio runs large local models. The laptop cannot, but at
+home it can use the Studio's LM Studio server over the LAN. `machines/<name>/`
+is a layer for those differences, merged after the domain layers and before the
+context. The name comes from `scutil --get LocalHostName`. A machine with no
+folder gets no machine layer.
+
+```
+machines/
+	mac-studio/opencode.json      lmstudio at 127.0.0.1, the large models allowed
+	macbook-pro/opencode.json     no local models
+contexts/
+	home/opencode.json            lmstudio at the Studio's LAN address
+```
+
+The laptop at home gets the Studio's models through the `home` context. Away,
+it has cloud providers only. Whether the laptop roams is not a machine setting:
+the `home` context probe answers that per launch.
+
+## Keeping two machines in sync
+
+Sync the source through git, rebuild what is derived on each machine, and never
+file-sync the derived state.
+
+| Thing | Lives in | Synced by |
+|---|---|---|
+| Domain, context, machine, and project-override config | this repo | git |
+| Skills | this repo or a skill repo | git |
+| Built config sets | `~/.agents/` | nothing; `mi6` rebuilds them |
+| Secrets and API keys | Bitwarden | the bootstrap's restore step |
+| Claude Code and OpenCode logins | Keychain | log in once per account per machine |
+| Session history, plugin cache, auto-memory | inside each config set | nothing; per machine |
+| Tools and versions | `Brewfile` | `brew bundle` on each machine |
+
+An edit to config is a commit. Change a domain's `AGENTS.md` on the laptop
+through the `meta` domain, commit, push. On the Studio, the next `mi6` launch
+pulls it. Because the config set links to the file, no rebuild follows.
+
+The pull is the sync. `mi6` runs `git pull --ff-only` on this repo and on each
+skill repo the layers use, at most once an hour, and carries on when offline.
+If a pull cannot fast-forward, because the same file changed on both machines
+without a push in between, `mi6` leaves that repo alone, prints one line naming
+it, and launches with what is on disk. Pushing stays a deliberate act.
+
+Day to day:
+
+- **Edit a skill.** It is live on that machine at once, because the set links
+  to the checkout. Commit and push when it is right.
+- **Add a skill.** Add the folder. The refresh pass links it on the next launch.
+- **Remove a skill.** Delete the folder. The dangling link is pruned.
+- **Uncommitted edits** stay on the machine that made them. That is git, not a
+  gap in the sync.
+
+Do not put `~/.agents/` or `~/.claude/` in iCloud Drive, Dropbox, or
+Syncthing. They hold symlink farms and SQLite session databases, and file sync
+corrupts both.
+
+Claude Code's auto-memory lives in the config set, so each machine builds its
+own. If shared memory turns out to matter, it can move to a private repo that
+`mi6` links in. Start without that.
 
 ## The `meta` domain
 
