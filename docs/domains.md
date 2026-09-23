@@ -83,6 +83,9 @@ domains/
 	westbound-workshop/
 project-overrides/
 	<repo-name>/                 additions for one repo, never committed to it
+contexts/
+	home/                        applied when on the home network, see Contexts
+	away/
 ```
 
 Each layer folder holds any of these, all optional:
@@ -92,7 +95,7 @@ Each layer folder holds any of these, all optional:
 | `AGENTS.md` | Instructions. Layers concatenate, top layer first. |
 | `skills/<name>/SKILL.md` | Skills. Layers union. On a name collision the deeper layer wins. |
 | `mcp.json` | MCP servers. Layers union. |
-| `policy.json` | Account and allowed models. A deeper layer can narrow the list, not widen it. |
+| `policy.json` | Account, allowed models, and which contexts apply. A deeper layer can narrow the model list, not widen it. |
 | `claude/settings.json` | Claude Code settings, including permissions. Deep-merged, deeper layer wins. |
 | `opencode.json` | OpenCode settings. Deep-merged, deeper layer wins. |
 
@@ -104,9 +107,13 @@ Each layer folder holds any of these, all optional:
 	"models": {
 		"claude": ["claude-opus-5-5", "claude-sonnet-5"],
 		"opencode": ["anthropic/*", "lmstudio/openai/gpt-oss-120b"]
-	}
+	},
+	"contexts": ["home"]
 }
 ```
+
+`contexts` lists the context groups the launcher evaluates for this layer. A
+layer that lists none runs no network probe.
 
 The build turns `models.claude` into `availableModels` and `model` in the Claude
 settings, and `models.opencode` into `enabled_providers` and `model` in the
@@ -152,14 +159,16 @@ accounts, so it is known to work for Claude Code.
 `agent <tool> [args]` does this on every run:
 
 1. Resolve the layers, or take `AGENT_DOMAIN`.
-2. Build or refresh the config set. A refresh compares symlink targets and
+2. Evaluate the contexts the merged `policy.json` lists, and add the matching
+   context layer on top. See Contexts.
+3. Build or refresh the config set. A refresh compares symlink targets and
    takes well under a second. It also creates the set the first time a new
    customer folder is used.
-3. Sync plugins and MCP servers if the merged list changed.
-4. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`.
-5. `exec` the real tool with the remaining arguments.
+4. Sync plugins and MCP servers if the merged list changed.
+5. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`.
+6. `exec` the real tool with the remaining arguments.
 
-`agent --no-domain <tool>` skips steps 1 to 4 and starts the tool with plain
+`agent --no-domain <tool>` skips steps 1 to 5 and starts the tool with plain
 user config. Use it to repair a broken `meta` config.
 
 Termic's agent registry runs `agent claude` and `agent opencode` in place of the
@@ -192,6 +201,72 @@ client's repo stays clean. A Termic worktree shares the main checkout's
 Owned repos never commit agent config either. A repo that should carry its own
 config is the exception and is not covered here.
 
+## Contexts: config that depends on the network
+
+A context is a layer that applies because of where the machine is, not what
+repo it is in. The one context group so far is `home`: whether the machine can
+reach the homelab network. It matters for `leek-homelab` and for shop work that
+reaches the same network, and for nothing else, so only those layers list it in
+`policy.json`. A customer session never runs the probe.
+
+### Detect the network, not the services
+
+A host that does not answer may be down, and that may be the reason for the
+session. So the probe tests for the network itself and never for a host on it.
+Reachability of individual hosts is reported as a fact, not used as a gate.
+
+Two signals, both independent of any server:
+
+- **Onsite.** The default gateway's MAC address is the UDM-Pro's. A gateway IP
+  alone is not enough, since `192.168.1.1` is every coffee shop's router.
+- **Remote.** Teleport, through WiFiman, is WireGuard, and on macOS it appears
+  as a `utun` interface that carries the route to the homelab VLANs. If the
+  route to the server VLAN goes through a `utun` interface, the tunnel is up.
+
+The Wi-Fi name is not used. Reading it needs Location Services permission for
+the calling process, which a script spawned by Termic does not have.
+
+```zsh
+iface=$(route -n get 10.100.20.0 | awk '/interface/ {print $2}')
+gw_mac=$(arp -n $(route -n get default | awk '/gateway/ {print $2}') | awk '{print $4}')
+
+case $iface in
+	utun*) ctx=home-vpn ;;
+	en*)   [[ $gw_mac == 68:d7:9a:21:c1:9a ]] && ctx=home-lan || ctx=away ;;
+	*)     ctx=away ;;
+esac
+```
+
+| State | Meaning | Context layer |
+|---|---|---|
+| `home-lan` | Router MAC matches | `contexts/home/` |
+| `home-vpn` | Teleport tunnel routes the server VLAN | `contexts/home/` |
+| `away` | Neither | `contexts/away/` |
+
+The values come from `~/Documents/git/personal/leek-homelab`, which is the
+source of truth for the network. `contexts/home/network.json` holds only what
+the probe needs and names the files it was copied from:
+
+| Value | Source in `leek-homelab` |
+|---|---|
+| UDM-Pro MAC `68:d7:9a:21:c1:9a` | `leek-homelab/infrastructure/network-upgrade-10g.md` |
+| Server VLAN `10.100.20.0/24` | `terraform/unifi/networks.tf` |
+| Pi-hole `10.100.20.10`, for an optional DNS cross-check | `leek-homelab/runbooks/deploy-new-service.md` |
+
+### Applied at launch and refreshed per prompt
+
+The launcher evaluates the context once and merges the context layer last, so
+it can add the homelab MCP servers and an `AGENTS.md` line such as "homelab
+reachable over Teleport". A session keeps the MCP servers it started with, so
+coming home mid-session needs a restart to gain them.
+
+The other direction is the dangerous one: leaving the house mid-session. A
+Claude Code `UserPromptSubmit` hook in `contexts/home/claude/settings.json` runs
+the same probe before each prompt and adds one line of context, for example
+`network: away, homelab unreachable`, or `network: home-lan, proxmox-1 not
+answering on 8006`. The probe takes well under a second. OpenCode's plugin hooks
+are checked for an equivalent.
+
 ## The `meta` domain
 
 `meta` is an ordinary layer. It holds this repo and the skill repos, and its
@@ -221,3 +296,8 @@ edit breaks the `meta` set, `agent --no-domain claude` starts without it.
 - Where Claude Code stores credentials on macOS when `CLAUDE_CONFIG_DIR` is set.
 - Termic's named accounts and `agent claude` in the registry work together, or
   the launcher's account handling replaces Termic's.
+- The gateway MAC that `arp` reports on the client VLAN is the UDM-Pro system
+  MAC `68:d7:9a:21:c1:9a`. A UDM can present a different MAC per VLAN.
+- Teleport's interface on macOS is `utun*` and carries a route to
+  `10.100.20.0/24` while connected.
+- OpenCode has a per-prompt hook that can add context, for the network refresh.
