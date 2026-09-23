@@ -51,7 +51,7 @@ picks it.
   `astronomer/customers/acme` are three layers.
 - **Config set**: the merged result of `shared` plus every layer on the path,
   built as one directory per tool.
-- **Launcher**: the `agent` script that resolves the layers and starts the tool.
+- **Launcher**: the `mi6` script that resolves the layers and starts the tool.
 
 ## How the launcher finds the domain
 
@@ -67,7 +67,7 @@ have no remote.
 3. Walk that path from the top. Each folder that has a matching folder under
    `domains/` in this repo is a layer.
 4. If the checkout is not under `~/Documents/git/`, use the `default` layer.
-5. `AGENT_DOMAIN=<path>` overrides steps 1 to 4.
+5. `MI6_DOMAIN=<path>` overrides steps 1 to 4.
 
 ## Layout in this repo
 
@@ -156,9 +156,9 @@ accounts, so it is known to work for Claude Code.
 
 ## The launcher
 
-`agent <tool> [args]` does this on every run:
+`mi6 <tool> [args]` does this on every run:
 
-1. Resolve the layers, or take `AGENT_DOMAIN`.
+1. Resolve the layers, or take `MI6_DOMAIN`.
 2. Evaluate the contexts the merged `policy.json` lists, and add the matching
    context layer on top. See Contexts.
 3. Build or refresh the config set. A refresh compares symlink targets and
@@ -168,10 +168,10 @@ accounts, so it is known to work for Claude Code.
 5. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`.
 6. `exec` the real tool with the remaining arguments.
 
-`agent --no-domain <tool>` skips steps 1 to 5 and starts the tool with plain
+`mi6 --no-domain <tool>` skips steps 1 to 5 and starts the tool with plain
 user config. Use it to repair a broken `meta` config.
 
-Termic's agent registry runs `agent claude` and `agent opencode` in place of the
+Termic's agent registry runs `mi6 claude` and `mi6 opencode` in place of the
 bare commands. Termic runs registry commands in a login shell, so the launcher
 must be on the login-shell `PATH`, which `setup.sh` already sets up through
 `.zprofile`.
@@ -181,8 +181,8 @@ must be on the login-shell `PATH`, which `setup.sh` already sets up through
 | You edit | Effect |
 |---|---|
 | `AGENTS.md`, a skill, `settings.json`, `opencode.json` | Live. The next agent start reads it. A running Claude Code session reloads settings on its own. |
-| `mcp.json`, a plugin list | Applied on the next `agent` run. |
-| A new layer folder under `domains/` | Built on the next `agent` run under that path. |
+| `mcp.json`, a plugin list | Applied on the next `mi6` run. |
+| A new layer folder under `domains/` | Built on the next `mi6` run under that path. |
 | `make-dirs.sh` | Only matters on a new machine. |
 
 You do not re-run the bootstrap after the initial machine setup. `setup.sh`
@@ -275,7 +275,7 @@ every other layer denies.
 
 The agent running under `meta` edits the files that define its own config. On
 the first machine setup, `setup.sh` builds the sets before any agent runs. If an
-edit breaks the `meta` set, `agent --no-domain claude` starts without it.
+edit breaks the `meta` set, `mi6 --no-domain claude` starts without it.
 
 ## Bootstrap changes this needs
 
@@ -285,7 +285,7 @@ edit breaks the `meta` set, `agent --no-domain claude` starts without it.
 - `scripts/claude-env.sh`: replace the `SKILL_SOURCES` symlinking into
   `~/.claude/skills/` with the per-set build. The plugin marketplace and hook
   patch steps move into the build, per set.
-- `setup.sh`: install `agent` on the login-shell `PATH` and run the first build.
+- `setup.sh`: install `mi6` on the login-shell `PATH` and run the first build.
 
 ## Checked on the new machine before relying on it
 
@@ -294,7 +294,7 @@ edit breaks the `meta` set, `agent --no-domain claude` starts without it.
 - OpenCode reads skills from `OPENCODE_CONFIG_DIR`. The docs list agents,
   commands, modes, and plugins.
 - Where Claude Code stores credentials on macOS when `CLAUDE_CONFIG_DIR` is set.
-- Termic's named accounts and `agent claude` in the registry work together, or
+- Termic's named accounts and `mi6 claude` in the registry work together, or
   the launcher's account handling replaces Termic's.
 - The gateway MAC that `arp` reports on the client VLAN is the UDM-Pro system
   MAC `68:d7:9a:21:c1:9a`. A UDM can present a different MAC per VLAN.
