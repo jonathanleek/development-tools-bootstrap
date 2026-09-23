@@ -72,6 +72,14 @@ Reproduces the personal Claude setup:
 - Installs `~/.claude/CLAUDE.md`, `~/.claude/statusline.sh`, and merges
   `~/.claude/settings.json` (statusline + read-only permission allowlist).
 
+## Per-domain agent config (planned)
+
+Agent configuration per domain folder is designed in
+[mi6](https://github.com/jonathanleek/mi6), with the personal layers in a
+private config repo. Once the launcher exists, this bootstrap installs it,
+clones the config repo, and runs the first build. The `meta` folder that
+`make-dirs.sh` creates is where those repos live.
+
 ## After running
 
 - Open a **new** terminal so Homebrew, pyenv, and the prompt load.
