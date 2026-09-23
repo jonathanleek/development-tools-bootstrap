@@ -113,9 +113,16 @@ Each layer folder holds any of these, all optional:
 		"opencode": ["anthropic/*", "lmstudio/openai/gpt-oss-120b"]
 	},
 	"contexts": ["home"],
-	"skill_sources": ["jonathanleek/claude-skills"]
+	"skill_sources": ["jonathanleek/claude-skills"],
+	"astro": {
+		"organization": "acme-corp",
+		"workspace": "acme-prod"
+	}
 }
 ```
+
+`astro` names the Astronomer organization and workspace that `astro` and Otto
+work against in this layer. See Astronomer organization per layer.
 
 `contexts` lists the context groups the launcher evaluates for this layer. A
 layer that lists none runs no network probe.
@@ -139,6 +146,7 @@ The build writes one directory per config set and per tool:
 	astronomer/customers/acme/
 		claude/        CLAUDE_CONFIG_DIR for this set
 		opencode/      OPENCODE_CONFIG_DIR for this set
+		astro/         ASTRO_HOME for this set, when the layer sets "astro"
 	accounts/
 		work/          credentials shared by every set with "account": "work"
 		personal/
@@ -179,7 +187,8 @@ accounts, so it is known to work for Claude Code.
    takes well under a second. It also creates the set the first time a new
    customer folder is used.
 6. Sync plugins and MCP servers if the merged list changed.
-7. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`.
+7. Export `CLAUDE_CONFIG_DIR` or `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR`,
+   and `ASTRO_HOME` when the merged policy sets `astro`.
 8. `exec` the real tool with the remaining arguments.
 
 Layers merge in this order, later wins: `shared`, the domain path from the top
@@ -284,6 +293,40 @@ the same probe before each prompt and adds one line of context, for example
 answering on 8006`. The probe takes well under a second. OpenCode's plugin hooks
 are checked for an equivalent.
 
+## Astronomer organization per layer
+
+Customer work runs against that customer's Astronomer organization. The Astro
+CLI keeps one active organization and workspace in `~/.astro/config.yaml`, and
+`astro organization switch` changes it for every shell on the machine. Two
+Termic tasks for two customers would fight over it. Otto inherits the same
+context: `astro otto` sets `ASTRO_TOKEN`, `ASTRO_DOMAIN`, and
+`ASTRO_ORGANIZATION` from the active login.
+
+The CLI reads `ASTRO_HOME` and, when it is set, keeps `.astro/` there instead
+of under `$HOME`. That directory holds the login contexts, Otto's user settings
+in `otto/settings.json`, and Otto's sessions. So a layer that sets `astro` in
+`policy.json` gets its own `astro/` directory in the config set, and `mi6`
+exports `ASTRO_HOME` to it. Each customer layer is logged in to its own
+organization, and sessions for different customers never share a context.
+
+On launch, when the layer sets `astro`, `mi6`:
+
+1. Creates the `astro/` directory in the set if it is missing.
+2. If no login exists there, prints `astro login` as the next step and
+   continues. The first launch in a new customer layer is where you log in.
+3. If the active organization or workspace in that directory differs from the
+   policy, runs `astro organization switch <org> --workspace-id <ws>`.
+
+An organization API token from Bitwarden, exported as `ASTRO_API_TOKEN`, is the
+alternative to an interactive login for a layer. The CLI takes the token over
+the login context. Use it for a customer organization where a personal login
+is not wanted.
+
+Otto's project-level files, `.astro/otto/permissions.json` and
+`.astro/otto/extensions.json`, are committed to the repo, so they are not used
+for per-layer settings. Otto's user-level `otto/settings.json` lives in
+`ASTRO_HOME`, which makes it per layer.
+
 ## Machines: config that depends on the hardware
 
 The Mac Studio and the MacBook Pro run the same config repo, but they are not
@@ -381,3 +424,7 @@ edit breaks the `meta` set, `mi6 --no-domain claude` starts without it.
 - Teleport's interface on macOS is `utun*` and carries a route to
   `10.100.20.0/24` while connected.
 - OpenCode has a per-prompt hook that can add context, for the network refresh.
+- `ASTRO_HOME` moves the whole `.astro/` directory, including Otto's settings
+  and sessions, and `astro otto` sets `ASTRO_ORGANIZATION` from the login in
+  that directory. The variable is in `config/config.go` in `astronomer/astro-cli`
+  and not in the docs.
