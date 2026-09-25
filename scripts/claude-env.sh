@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Reproduce the Claude Code environment: plugin marketplaces, the astronomer-data
-# plugin, the narrowed airflow hook, skill repos, and ~/.claude config.
-# Idempotent. Needs the `claude` CLI (native installer, ~/.local/bin) and GitHub auth.
+# plugin, the narrowed airflow hook, and ~/.claude config.
+# Idempotent. Needs the `claude` CLI (native installer, ~/.local/bin).
 set -euo pipefail
 
 REPO="${0:A:h:h}"          # repo root (scripts/ is one level down)
@@ -14,7 +14,7 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 0
 fi
 
-mkdir -p "$CLAUDE_DIR/skills"
+mkdir -p "$CLAUDE_DIR"
 
 # 1. Plugin marketplaces
 log "Adding plugin marketplaces..."
@@ -36,56 +36,7 @@ find "$CLAUDE_DIR/plugins/cache" -path '*skills/airflow/hooks/airflow-skill-sugg
   print "   patched $hook"
 done
 
-# 4. Skill sources: clone/update each repo, then symlink every skills/<name>/
-#    folder that contains a SKILL.md into ~/.claude/skills/<name>.
-#    Format: "github-owner/repo-name|local-clone-path". First source wins on a
-#    name collision. Only dangling symlinks are ever removed from ~/.claude/skills.
-SKILL_SOURCES=(
-  "jonathanleek/claude-skills|$HOME/Documents/git/personal/claude-skills"
-  "jonathanleek/makerspace-claude-skills|$HOME/Documents/git/westbound-workshop/makerspace-claude-skills"
-)
-
-sync_repo() {  # sync_repo owner/name /local/path
-  local slug="$1" dest="$2"
-  if [[ -d "$dest/.git" ]]; then
-    git -C "$dest" pull -q --ff-only 2>/dev/null || true
-    return 0
-  fi
-  mkdir -p "${dest:h}"
-  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    gh repo clone "$slug" "$dest" 2>/dev/null && return 0
-  fi
-  git clone "git@github.com:$slug.git" "$dest" 2>/dev/null \
-    || git clone "https://github.com/$slug.git" "$dest" 2>/dev/null \
-    || { print "   could not clone $slug — skipping"; return 1; }
-}
-
-log "Syncing skill sources..."
-typeset -A linked
-for entry in "${SKILL_SOURCES[@]}"; do
-  slug="${entry%%|*}"; dest="${entry#*|}"
-  sync_repo "$slug" "$dest" || continue
-  for skill_md in "$dest"/skills/*/SKILL.md(N); do
-    src="${skill_md:h}"; name="${src:t}"
-    if [[ -n "${linked[$name]:-}" ]]; then
-      print "   skip $name from $slug (already linked from ${linked[$name]})"
-      continue
-    fi
-    ln -sfn "$src" "$CLAUDE_DIR/skills/$name"
-    linked[$name]="$slug"
-    print "   linked $name <- $slug"
-  done
-done
-
-# Remove symlinks whose target no longer exists (skill deleted or repo moved).
-for link in "$CLAUDE_DIR"/skills/*(@N); do
-  if [[ ! -e "$link" ]]; then
-    rm "$link"
-    print "   removed dangling link ${link:t}"
-  fi
-done
-
-# 5. Config: CLAUDE.md + statusline (copy), settings.json (merge, don't clobber)
+# 4. Config: CLAUDE.md + statusline (copy), settings.json (merge, don't clobber)
 log "Installing Claude config..."
 cp "$TPL/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
 cp "$TPL/statusline.sh" "$CLAUDE_DIR/statusline.sh"

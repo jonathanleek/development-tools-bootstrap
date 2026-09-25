@@ -15,7 +15,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/restore-secrets.sh` | Restores secrets from Bitwarden (pulls + runs the stored `restore-script` note) |
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
-| `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, skills, config) |
+| `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
 | `claude/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
 > Shell dotfiles (`.zshrc`, `.gitconfig`, etc.) are **not** managed here yet —
@@ -64,11 +64,6 @@ Reproduces the personal Claude setup:
 - Installs the `astronomer-data` plugin.
 - Re-applies a **narrowed** `airflow-skill-suggester` hook (the shipped one matches
   the fragment `"af"` and generic words, firing on unrelated prompts).
-- Syncs each repo in `SKILL_SOURCES` (currently `claude-skills` for general skills
-  and `makerspace-claude-skills` for workshop skills) and symlinks every
-  `skills/<name>/` folder containing a `SKILL.md` into `~/.claude/skills/`.
-  Adding a skill is just a new folder in one of those repos; adding a repo is
-  one line in the array. Dangling links are pruned; nothing else is removed.
 - Installs `~/.claude/CLAUDE.md`, `~/.claude/statusline.sh`, and merges
   `~/.claude/settings.json` (statusline + read-only permission allowlist).
 
