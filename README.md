@@ -75,9 +75,9 @@ Reproduces the personal Claude setup:
 ## Per-domain agent config (planned)
 
 Agent configuration per folder comes from
-[mi6](https://github.com/jonathanleek/mi6), with the personal layers in a
-private config repo that the folders' `.mi6` symlinks point into. This
-bootstrap will install `mi6`, clone the config repo, and create the links.
+[mi6](https://github.com/jonathanleek/mi6): every folder `make-dirs.sh`
+creates gets a `.mi6/` layer, filled by hand. This bootstrap will install
+`mi6` and alias `claude` and `opencode` to run through it.
 
 ## After running
 
