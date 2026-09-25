@@ -74,11 +74,10 @@ Reproduces the personal Claude setup:
 
 ## Per-domain agent config (planned)
 
-Agent configuration per domain folder is designed in
+Agent configuration per folder comes from
 [mi6](https://github.com/jonathanleek/mi6), with the personal layers in a
-private config repo. Once the launcher exists, this bootstrap installs it,
-clones the config repo, and runs the first build. The `meta` folder that
-`make-dirs.sh` creates is where those repos live.
+private config repo that the folders' `.mi6` symlinks point into. This
+bootstrap will install `mi6`, clone the config repo, and create the links.
 
 ## After running
 
