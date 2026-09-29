@@ -1,0 +1,32 @@
+# Ghostty config — installed to ~/.config/ghostty/config by scripts/ghostty.sh.
+# Reference: https://ghostty.org/docs/config/reference
+# Reload a running Ghostty with cmd+shift+, after editing.
+# Comments must be on their own line: Ghostty reads a trailing "# ..." as part
+# of the value.
+
+# ---- Look ----
+# Nerd Font glyphs for the powerlevel10k prompt
+font-family = Hack Nerd Font
+font-size = 14
+# Follows macOS light/dark mode
+theme = dark:Catppuccin Mocha,light:Catppuccin Latte
+window-padding-x = 8
+window-padding-y = 6
+macos-titlebar-style = tabs
+
+# ---- Behaviour ----
+copy-on-select = clipboard
+confirm-close-surface = false
+shell-integration-features = cursor,sudo,title
+# Option acts as Alt: option+arrow word jumps, alt shortcuts in TUIs
+macos-option-as-alt = true
+
+# ---- Quick terminal (drop-down) ----
+# cmd+enter anywhere on the Mac. `global:` needs Ghostty allowed under
+# System Settings -> Privacy & Security -> Accessibility. It replaces Ghostty's
+# default cmd+enter (toggle fullscreen) and takes cmd+enter from other apps.
+keybind = global:super+enter=toggle_quick_terminal
+quick-terminal-position = top
+quick-terminal-size = 45%
+quick-terminal-autohide = true
+quick-terminal-animation-duration = 0.15
