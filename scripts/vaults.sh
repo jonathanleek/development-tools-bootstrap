@@ -15,18 +15,18 @@ VAULTS=(
 )
 
 clone_one() {
-  local path="$1" slug="$2"
-  if [[ -d "$path/.git" ]]; then
-    print "exists: $path (pull --ff-only)"
-    git -C "$path" pull --ff-only 2>/dev/null || print "  (skipped pull)"
+  local dest="$1" slug="$2"   # not `path`: in zsh that is tied to $PATH
+  if [[ -d "$dest/.git" ]]; then
+    print "exists: $dest (pull --ff-only)"
+    git -C "$dest" pull --ff-only 2>/dev/null || print "  (skipped pull)"
     return 0
   fi
-  mkdir -p "${path:h}"
+  mkdir -p "${dest:h}"
   if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    gh repo clone "$slug" "$path"
+    gh repo clone "$slug" "$dest"
   else
-    git clone "git@github.com:$slug.git" "$path" \
-      || git clone "https://github.com/$slug.git" "$path"
+    git clone "git@github.com:$slug.git" "$dest" \
+      || git clone "https://github.com/$slug.git" "$dest"
   fi
 }
 
