@@ -1,0 +1,12 @@
+# ~/.zprofile — symlinked from development-tools-bootstrap/dotfiles/zprofile.
+# Login shells read this, not .zshrc — including the shells GUI tools and agent
+# launchers (Termic, etc.) start — so PATH belongs here.
+
+# Homebrew (Apple Silicon)
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+
+# Claude Code native install
+export PATH="$HOME/.local/bin:$PATH"
+
+# go install (mi6)
+export PATH="$HOME/go/bin:$PATH"

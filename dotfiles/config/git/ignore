@@ -1,0 +1,3 @@
+# Global gitignore (~/.config/git/ignore), symlinked from development-tools-bootstrap.
+**/.claude/settings.local.json
+.DS_Store

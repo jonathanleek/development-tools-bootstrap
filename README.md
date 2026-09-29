@@ -16,13 +16,21 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/backup-secrets-to-bw.sh` / `scripts/restore-secrets-from-bw.sh` | Back up / restore everything in the manifest |
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure, installs `mi6`, and gives every folder a `.mi6/` layer |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
-| `scripts/ghostty.sh` | Installs the Ghostty config from `ghostty/` (quick terminal on cmd+enter) |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
-| `ghostty/config` | Ghostty terminal config |
+| `dotfiles/` + `scripts/dotfiles.sh` | Shell dotfiles, symlinked into `$HOME` (see below) |
 | `claude/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
-> Shell dotfiles (`.zshrc`, `.gitconfig`, etc.) are **not** managed here yet —
-> set those up on the new machine and add them to this repo later.
+## Dotfiles
+
+`dotfiles/` holds the shell config (`.zshrc`, `.zprofile`, `.p10k.zsh`) and git
+config (`.gitconfig`, global ignore, the work identity for `astronomer/`), plus the
+mi6 layer instructions (`AGENTS.md`) under `~/Documents/git`, and the Ghostty
+config (quick terminal on cmd+enter). `scripts/dotfiles.sh`
+symlinks them into `$HOME`, so editing `~/.zshrc` edits the repo — commit the
+change here. Links are only made from the permanent clone at
+`~/Documents/git/personal/development-tools-bootstrap` (setup.sh clones it there
+if you ran it from a download); anything already in the way is moved to
+`<file>.bak-<timestamp>`, never deleted.
 
 ## What `setup.sh` does
 
@@ -30,7 +38,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 2. Installs Rosetta 2.
 3. Installs Homebrew and wires it into the shell (`/opt/homebrew`).
 4. Installs everything in [`Brewfile`](./Brewfile) via `brew bundle`.
-5. Installs Oh My Zsh + powerlevel10k.
+5. Installs Oh My Zsh and links the dotfiles (shell config, powerlevel10k prompt).
 6. Installs the latest stable Python via `pyenv` (global).
 7. Installs the latest Terraform via `tfenv`.
 8. Creates the `~/Documents/git/<org>/` directory structure and runs `mi6 init` on every folder (installing `mi6` with `go install` first).

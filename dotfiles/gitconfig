@@ -1,0 +1,11 @@
+# ~/.gitconfig — symlinked from development-tools-bootstrap/dotfiles/gitconfig
+[user]
+	name = jonathanleek
+	email = jonathanleek@gmail.com
+[core]
+	autocrlf = input
+[init]
+	defaultBranch = main
+# Astronomer repos commit with the work address.
+[includeIf "gitdir:~/Documents/git/astronomer/"]
+	path = ~/.config/git/astronomer.gitconfig
