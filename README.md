@@ -24,7 +24,9 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 
 `dotfiles/` holds the shell config (`.zshrc`, `.zprofile`, `.p10k.zsh`) and git
 config (`.gitconfig`, global ignore, the work identity for `astronomer/`), plus the
-mi6 layer instructions (`AGENTS.md`) under `~/Documents/git`, and the Ghostty
+mi6 layer files under `~/Documents/git` that hold no secrets (the folder-layout
+`AGENTS.md`; the Fusion MCP server for `personal`, `westbound-workshop` and
+`arch-reactor`), and the Ghostty
 config (quick terminal on cmd+enter). `scripts/dotfiles.sh`
 symlinks them into `$HOME`, so editing `~/.zshrc` edits the repo — commit the
 change here. Links are only made from the permanent clone at

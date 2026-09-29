@@ -26,8 +26,13 @@ LINKS=(
   "config/git/ignore|.config/git/ignore"
   "config/git/astronomer.gitconfig|.config/git/astronomer.gitconfig"
   "config/ghostty/config|.config/ghostty/config"
-  # mi6 layer instructions (AGENTS.md only; layer JSON may hold secrets)
+  # mi6 layers. Only files checked to hold no secrets: env.json and mcp.json
+  # are where tokens end up, and this repo is public.
   "mi6/git/AGENTS.md|Documents/git/.mi6/AGENTS.md"
+  # Fusion's local MCP server (http://127.0.0.1:27182/mcp; no credentials)
+  "mi6/git/personal/mcp.json|Documents/git/personal/.mi6/mcp.json"
+  "mi6/git/westbound-workshop/mcp.json|Documents/git/westbound-workshop/.mi6/mcp.json"
+  "mi6/git/arch-reactor/mcp.json|Documents/git/arch-reactor/.mi6/mcp.json"
 )
 
 stamp="$(date +%Y%m%d%H%M%S)"
