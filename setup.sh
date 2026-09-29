@@ -6,8 +6,9 @@
 # Idempotent: safe to re-run. Package list lives in ./Brewfile,
 # helper scripts in ./scripts.
 #
-# NOTE: shell dotfiles (.zshrc etc.) are intentionally NOT managed here yet —
-# set those up on the new machine and add them to the repo later.
+# Shell dotfiles (.zshrc, .zprofile, .p10k.zsh, ...) live in ./dotfiles and are
+# symlinked into $HOME from the permanent clone at
+# ~/Documents/git/personal/development-tools-bootstrap (step 5).
 
 set -euo pipefail
 
@@ -53,11 +54,6 @@ elif [[ -x /usr/local/bin/brew ]]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
 
-# Persist brew for future login shells
-if ! grep -q 'brew shellenv' "$HOME/.zprofile" 2>/dev/null; then
-  print 'eval "$('"$(command -v brew)"' shellenv)"' >> "$HOME/.zprofile"
-fi
-
 log "Updating Homebrew..."
 brew update
 brew upgrade
@@ -72,7 +68,7 @@ brew bundle --file "$SCRIPT_DIR/Brewfile" || \
 brew cleanup
 
 # ---------------------------------------------------------------------------
-# 5. Oh My Zsh + powerlevel10k prompt
+# 5. Oh My Zsh + dotfiles (.zshrc, .zprofile, powerlevel10k prompt, ...)
 # ---------------------------------------------------------------------------
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   log "Installing Oh My Zsh..."
@@ -80,29 +76,22 @@ if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-if ! grep -q 'powerlevel10k.zsh-theme' "$HOME/.zshrc" 2>/dev/null; then
-  log "Enabling powerlevel10k in .zshrc..."
-  {
-    print ''
-    print '# powerlevel10k'
-    print "source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme"
-  } >> "$HOME/.zshrc"
+# The dotfiles are symlinks into the permanent clone, so make sure it exists
+# (this script may be running from a downloaded copy). The repo is public, so
+# HTTPS works before any GitHub auth is set up.
+BOOTSTRAP="$HOME/Documents/git/personal/development-tools-bootstrap"
+if [[ ! -d "$BOOTSTRAP/.git" ]]; then
+  log "Cloning development-tools-bootstrap to $BOOTSTRAP..."
+  mkdir -p "${BOOTSTRAP:h}"
+  git clone https://github.com/jonathanleek/development-tools-bootstrap.git "$BOOTSTRAP"
 fi
+log "Linking dotfiles..."
+"$BOOTSTRAP/scripts/dotfiles.sh"
 
 # ---------------------------------------------------------------------------
 # 6. Python via pyenv (latest stable release)
 # ---------------------------------------------------------------------------
-if ! grep -q 'pyenv init' "$HOME/.zshrc" 2>/dev/null; then
-  log "Adding pyenv init to .zshrc..."
-  cat >> "$HOME/.zshrc" <<'EOF'
-
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-EOF
-fi
-
+# (.zshrc from ./dotfiles sets this up for later shells; this is for this run)
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
@@ -128,11 +117,7 @@ tfenv use latest
 # ---------------------------------------------------------------------------
 log "Creating directory structure..."
 "$SCRIPT_DIR/scripts/make-dirs.sh"
-# mi6 is installed with `go install` into ~/go/bin. Put it on PATH in login
-# shells, which is what Termic and other agent launchers spawn.
-if ! grep -q 'go/bin' "$HOME/.zprofile" 2>/dev/null; then
-  print 'export PATH="$HOME/go/bin:$PATH"   # go install (mi6)' >> "$HOME/.zprofile"
-fi
+# (~/go/bin, where mi6 lands, is on PATH for later shells via dotfiles/zprofile)
 
 # ---------------------------------------------------------------------------
 # 9. Start background services
@@ -181,11 +166,8 @@ if [[ ! -x "$HOME/.local/bin/claude" ]]; then
   log "Installing Claude Code (native installer)..."
   curl -fsSL https://claude.ai/install.sh | bash || log "Claude Code install failed — run it manually later"
 fi
-# ~/.local/bin must be on PATH in *login* shells too: GUI apps that spawn agents
-# (Termic, etc.) capture `zsh -l`, which reads .zprofile but never .zshrc.
-if ! grep -q '\.local/bin' "$HOME/.zprofile" 2>/dev/null; then
-  print 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zprofile"
-fi
+# ~/.local/bin is on PATH for later login shells via dotfiles/zprofile (GUI
+# apps that spawn agents, e.g. Termic, read .zprofile but never .zshrc).
 export PATH="$HOME/.local/bin:$PATH"
 
 log "Setting up Claude Code environment..."
@@ -198,8 +180,7 @@ log "Setting up Claude Code environment..."
 log "Setup complete."
 print -P "%F{yellow}Next steps:%f"
 print "  1. Open a NEW terminal window (so brew/pyenv/prompt load)."
-print "  2. Run: p10k configure   (creates ~/.p10k.zsh for the prompt)"
-print "  3. Set up your shell dotfiles (.zshrc etc.) and any API keys."
-print "  4. Sign into the App Store, then re-run: brew bundle   (Fantastical / Magnet / etc.)"
-print "  5. Manual installs (no cask): MakeMKV (cask disabled), Meshmixer, RevoScan5,"
+print "  2. Add any API keys (not in Bitwarden: the Anthropic key, WireGuard)."
+print "  3. Sign into the App Store, then re-run: brew bundle   (Fantastical / Magnet / etc.)"
+print "  4. Manual installs (no cask): MakeMKV (cask disabled), Meshmixer, RevoScan5,"
 print "     Blueprint Studio, TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect."
