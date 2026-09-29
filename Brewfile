@@ -31,7 +31,7 @@ brew "awscli"
 brew "ollama"                                     # run local LLMs (CLI + server)
 brew "pyenv"                                      # Python version manager
 brew "tfenv"                                      # Terraform version manager
-brew "romkatv/powerlevel10k/powerlevel10k"        # zsh prompt theme
+brew "powerlevel10k"                               # zsh prompt theme
 brew "mdbtools"                                   # read MS Access .mdb files
 brew "pigz"                                       # parallel gzip
 brew "speedtest-cli"
@@ -57,13 +57,12 @@ cask "claude"                                     # Claude desktop app
 #   curl -fsSL https://claude.ai/install.sh | bash
 cask "cordwainersmith/claudoscope/claudoscope"    # Claude Code session dashboard
 cask "migsilva89/loadout/loadout"                 # Loadout — Claude Code skills/agents/MCP manager
-cask "conductor"                                  # Conductor (conductor.build)
 cask "lm-studio"                                  # LM Studio — run local LLMs
 
 # ===========================================================================
 # Browsers & communication
 # ===========================================================================
-cask "brave-origin"
+# cask "brave-origin"                             # installed outside brew on this Mac (self-updates)
 cask "slack"
 cask "discord"
 cask "signal"
@@ -72,7 +71,7 @@ cask "zoom"
 # ===========================================================================
 # Utilities
 # ===========================================================================
-cask "bitwarden"                                  # password manager (also TOTP)
+# cask "bitwarden"                                # password manager (also TOTP) — installed outside brew on this Mac (self-updates)
 cask "ente-auth"                                  # 2FA authenticator
 cask "stats"                                      # free system monitor
 cask "appcleaner"
@@ -87,14 +86,13 @@ cask "microsoft-office"                           # Word, Excel, PowerPoint, Out
 # ===========================================================================
 cask "vlc"
 cask "plex"
-cask "makemkv"
 
 # ===========================================================================
 # 3D printing / making
 # ===========================================================================
 cask "bambu-studio"                               # Bambu Lab slicer
 cask "openscad@snapshot"                          # parametric CAD
-cask "autodesk-fusion360"                         # CAD/CAM
+cask "autodesk-fusion"                             # CAD/CAM
 cask "lightburn"                                  # laser control
 cask "raspberry-pi-imager"
 cask "balenaetcher"
