@@ -25,6 +25,8 @@ LINKS=(
   "gitconfig|.gitconfig"
   "config/git/ignore|.config/git/ignore"
   "config/git/astronomer.gitconfig|.config/git/astronomer.gitconfig"
+  # mi6 layer instructions (AGENTS.md only; layer JSON may hold secrets)
+  "mi6/git/AGENTS.md|Documents/git/.mi6/AGENTS.md"
 )
 
 stamp="$(date +%Y%m%d%H%M%S)"
