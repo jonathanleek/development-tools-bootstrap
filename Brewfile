@@ -12,6 +12,7 @@
 # ===========================================================================
 tap "cordwainersmith/claudoscope"                 # Claudoscope (upstream author's tap)
 tap "migsilva89/loadout"                          # Loadout (upstream author's tap)
+tap "simion/termic"                               # Termic (upstream author's tap)
 
 # ===========================================================================
 # CLI tools (formulae)
@@ -57,6 +58,7 @@ cask "claude"                                     # Claude desktop app
 #   curl -fsSL https://claude.ai/install.sh | bash
 cask "cordwainersmith/claudoscope/claudoscope"    # Claude Code session dashboard
 cask "migsilva89/loadout/loadout"                 # Loadout — Claude Code skills/agents/MCP manager
+cask "simion/termic/termic"                       # Termic — run coding agents in parallel git worktrees
 cask "lm-studio"                                  # LM Studio — run local LLMs
 
 # ===========================================================================
