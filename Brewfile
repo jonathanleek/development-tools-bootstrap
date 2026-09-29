@@ -22,6 +22,7 @@ brew "jq"                                         # JSON processor (used by the 
 brew "mas"                                        # Mac App Store CLI
 brew "bitwarden-cli"                               # `bw` — secret backup/restore
 brew "node"
+brew "go"                                         # needed for `go install` of mi6 (scripts/make-dirs.sh)
 brew "just"                                       # command runner
 brew "pre-commit"                                 # git hook framework
 brew "ansible"

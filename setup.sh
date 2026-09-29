@@ -164,7 +164,7 @@ log "Setting up vaults..."
   log "Vault setup incomplete (GitHub auth?) — run scripts/vaults.sh later"
 
 # ---------------------------------------------------------------------------
-# 14. Reproduce the Claude Code environment (plugins, skills, config)
+# 14. Reproduce the Claude Code environment (plugins, config)
 # ---------------------------------------------------------------------------
 # Install the CLI with the native installer (NOT the Homebrew cask — a second
 # `claude` in /opt/homebrew/bin wins PATH precedence and pins you to a stale

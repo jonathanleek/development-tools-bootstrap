@@ -13,9 +13,9 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/macos.sh` | Sensible macOS system defaults (`defaults write`) |
 | `scripts/bootstrap-keys.sh` | Generates an SSH key and registers it with GitHub |
 | `scripts/restore-secrets.sh` | Restores secrets from Bitwarden (pulls + runs the stored `restore-script` note) |
-| `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure |
+| `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure, installs `mi6`, and gives every folder a `.mi6/` layer |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
-| `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, skills, config) |
+| `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
 | `claude/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
 > Shell dotfiles (`.zshrc`, `.gitconfig`, etc.) are **not** managed here yet —
@@ -30,7 +30,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 5. Installs Oh My Zsh + powerlevel10k.
 6. Installs the latest stable Python via `pyenv` (global).
 7. Installs the latest Terraform via `tfenv`.
-8. Creates the `~/Documents/git/<org>/` directory structure.
+8. Creates the `~/Documents/git/<org>/` directory structure and runs `mi6 init` on every folder (installing `mi6` with `go install` first).
 9. Starts the `ollama` service.
 10. Applies macOS defaults.
 11. Restores secrets from Bitwarden (SSH keys, `gh` token, homelab secrets) — interactive.
@@ -64,20 +64,15 @@ Reproduces the personal Claude setup:
 - Installs the `astronomer-data` plugin.
 - Re-applies a **narrowed** `airflow-skill-suggester` hook (the shipped one matches
   the fragment `"af"` and generic words, firing on unrelated prompts).
-- Syncs each repo in `SKILL_SOURCES` (currently `claude-skills` for general skills
-  and `makerspace-claude-skills` for workshop skills) and symlinks every
-  `skills/<name>/` folder containing a `SKILL.md` into `~/.claude/skills/`.
-  Adding a skill is just a new folder in one of those repos; adding a repo is
-  one line in the array. Dangling links are pruned; nothing else is removed.
 - Installs `~/.claude/CLAUDE.md`, `~/.claude/statusline.sh`, and merges
   `~/.claude/settings.json` (statusline + read-only permission allowlist).
 
-## After running
+## Per-domain agent config (`scripts/make-dirs.sh`)
 
-- Open a **new** terminal so Homebrew, pyenv, and the prompt load.
-- Run `p10k configure` to create `~/.p10k.zsh`.
-- Set up your shell dotfiles and API keys (keep secrets out of git).
-- Quit and reopen Obsidian so it re-reads its registered vaults.
-- Sign into the App Store, then re-run `brew bundle` (Fantastical, Magnet, etc.).
-- **Manual installs** (no Homebrew cask): Meshmixer, RevoScan5, Blueprint Studio,
-  TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect.
+Agent configuration per folder comes from
+[mi6](https://github.com/jonathanleek/mi6). `make-dirs.sh` installs `mi6`
+(`go install`, so `go` is in the Brewfile) and runs `mi6 init` on
+`~/Documents/git` and every folder it creates. Each `.mi6/` layer starts as
+the stub set of files `mi6` reads; the instructions, permissions, and env
+in each layer are filled by hand. Set `GIT_ROOT` to build the tree
+somewhere else.
