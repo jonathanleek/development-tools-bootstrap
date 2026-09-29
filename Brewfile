@@ -46,7 +46,7 @@ cask "font-hack-nerd-font"                        # glyphs for powerlevel10k
 # ===========================================================================
 # Dev & terminal apps
 # ===========================================================================
-cask "ghostty"                                    # terminal (GPU, native); config in ghostty/config
+cask "ghostty"                                    # terminal (GPU, native); config in dotfiles/config/ghostty
 cask "sublime-text"
 cask "obsidian"
 cask "jetbrains-toolbox"                          # installs PyCharm, DataGrip, etc.

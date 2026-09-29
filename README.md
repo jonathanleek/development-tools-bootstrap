@@ -16,9 +16,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/backup-secrets-to-bw.sh` / `scripts/restore-secrets-from-bw.sh` | Back up / restore everything in the manifest |
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure, installs `mi6`, and gives every folder a `.mi6/` layer |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
-| `scripts/ghostty.sh` | Installs the Ghostty config from `ghostty/` (quick terminal on cmd+enter) |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
-| `ghostty/config` | Ghostty terminal config |
 | `dotfiles/` + `scripts/dotfiles.sh` | Shell dotfiles, symlinked into `$HOME` (see below) |
 | `claude/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
@@ -26,7 +24,8 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 
 `dotfiles/` holds the shell config (`.zshrc`, `.zprofile`, `.p10k.zsh`) and git
 config (`.gitconfig`, global ignore, the work identity for `astronomer/`), plus the
-mi6 layer instructions (`AGENTS.md`) under `~/Documents/git`. `scripts/dotfiles.sh`
+mi6 layer instructions (`AGENTS.md`) under `~/Documents/git`, and the Ghostty
+config (quick terminal on cmd+enter). `scripts/dotfiles.sh`
 symlinks them into `$HOME`, so editing `~/.zshrc` edits the repo — commit the
 change here. Links are only made from the permanent clone at
 `~/Documents/git/personal/development-tools-bootstrap` (setup.sh clones it there

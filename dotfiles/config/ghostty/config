@@ -1,4 +1,4 @@
-# Ghostty config — installed to ~/.config/ghostty/config by scripts/ghostty.sh.
+# Ghostty config — symlinked to ~/.config/ghostty/config by scripts/dotfiles.sh.
 # Reference: https://ghostty.org/docs/config/reference
 # Reload a running Ghostty with cmd+shift+, after editing.
 # Comments must be on their own line: Ghostty reads a trailing "# ..." as part

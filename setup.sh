@@ -131,9 +131,6 @@ brew services start ollama || true
 log "Applying macOS defaults..."
 "$SCRIPT_DIR/scripts/macos.sh"
 
-log "Installing Ghostty config..."
-"$SCRIPT_DIR/scripts/ghostty.sh"
-
 # ---------------------------------------------------------------------------
 # 11. Restore secrets from Bitwarden (SSH keys, gh token, homelab secrets)
 #     Runs before key/vault steps so restored GitHub auth is available.
