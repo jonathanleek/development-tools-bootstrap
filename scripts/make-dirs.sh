@@ -15,6 +15,7 @@ DIRS=(
   astronomer/tools
   apache
   arch-reactor
+  openstl
 )
 
 # mi6 (https://github.com/jonathanleek/mi6) is a Go module; `go` comes from
