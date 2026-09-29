@@ -22,6 +22,9 @@ LINKS=(
   "zshrc|.zshrc"
   "zprofile|.zprofile"
   "p10k.zsh|.p10k.zsh"
+  "gitconfig|.gitconfig"
+  "config/git/ignore|.config/git/ignore"
+  "config/git/astronomer.gitconfig|.config/git/astronomer.gitconfig"
 )
 
 stamp="$(date +%Y%m%d%H%M%S)"

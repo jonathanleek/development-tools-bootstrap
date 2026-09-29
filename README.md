@@ -24,7 +24,8 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 
 ## Dotfiles
 
-`dotfiles/` holds `.zshrc`, `.zprofile` and `.p10k.zsh`. `scripts/dotfiles.sh`
+`dotfiles/` holds the shell config (`.zshrc`, `.zprofile`, `.p10k.zsh`) and git
+config (`.gitconfig`, global ignore, the work identity for `astronomer/`). `scripts/dotfiles.sh`
 symlinks them into `$HOME`, so editing `~/.zshrc` edits the repo — commit the
 change here. Links are only made from the permanent clone at
 `~/Documents/git/personal/development-tools-bootstrap` (setup.sh clones it there
