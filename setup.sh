@@ -85,7 +85,7 @@ if ! grep -q 'powerlevel10k.zsh-theme' "$HOME/.zshrc" 2>/dev/null; then
   {
     print ''
     print '# powerlevel10k'
-    print "source $(brew --prefix)/opt/powerlevel10k/powerlevel10k.zsh-theme"
+    print "source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme"
   } >> "$HOME/.zshrc"
 fi
 
@@ -193,5 +193,5 @@ print "  1. Open a NEW terminal window (so brew/pyenv/prompt load)."
 print "  2. Run: p10k configure   (creates ~/.p10k.zsh for the prompt)"
 print "  3. Set up your shell dotfiles (.zshrc etc.) and any API keys."
 print "  4. Sign into the App Store, then re-run: brew bundle   (Fantastical / Magnet / etc.)"
-print "  5. Manual installs (no cask): Meshmixer, RevoScan5, Blueprint Studio,"
-print "     TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect."
+print "  5. Manual installs (no cask): MakeMKV (cask disabled), Meshmixer, RevoScan5,"
+print "     Blueprint Studio, TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect."

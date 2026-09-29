@@ -10,7 +10,6 @@
   "permissions": {
     "allow": [
       "mcp__fusion__fusion_mcp_read",
-      "mcp__conductor__GetWorkspaceDiff",
       "Bash(brew info *)",
       "Bash(brew search *)",
       "Bash(dscacheutil *)"
