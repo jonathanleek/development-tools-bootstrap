@@ -23,8 +23,8 @@ Applies to all projects. A repo's own CLAUDE.md takes precedence over this.
 
 ## Conventions
 - Repo and directory names use **kebab-case**. Local repos live in
-  `~/Documents/git/<org>/` — orgs: `personal`, `astronomer`, `westbound-workshop`,
-  `apache`, `arch-reactor`.
+  `~/Documents/git/<org>/`; the folder layout is described in
+  `~/Documents/git/.mi6/AGENTS.md`.
 - Secrets never go in git or plaintext dotfiles; source them from a gitignored
   file or pull from Bitwarden.
 - Commit messages: concise subject line + a body explaining *why*; end with the
