@@ -8,13 +8,25 @@
 #   (if not logged in yet, run `bw login` first)
 #
 # STEP 2 — run this script:
-#     scripts/backup-secrets-to-bw.sh
+#     scripts/backup-secrets-to-bw.sh            # add new items only
+#     scripts/backup-secrets-to-bw.sh --update   # also refresh changed ones
 #
-# Idempotent: an item whose name already exists in the folder is skipped.
+# Idempotent: by default an item whose name already exists in the folder is
+# skipped, even if the local file has changed since. With --update, each
+# existing item is compared with the local file (in a private temp dir, never
+# printed) and replaced if it differs — run it after a `terraform apply` or
+# after rotating a key.
 # Restore with scripts/restore-secrets-from-bw.sh.
 set -euo pipefail
 
 source "${0:A:h}/secrets-manifest.sh"
+
+UPDATE=0
+case "${1:-}" in
+  "")       ;;
+  --update) UPDATE=1 ;;
+  *)        echo "usage: ${0:t} [--update]"; exit 2 ;;
+esac
 
 command -v bw >/dev/null || { echo "install first: brew install bitwarden-cli"; exit 1; }
 command -v jq >/dev/null || { echo "install first: brew install jq"; exit 1; }
@@ -56,6 +68,48 @@ lookup() { print -r -- "$INDEX" | awk -F'\t' -v n="$1" '$1==n {print $'"$2"'; ex
 # Secure Note field caps at 10000 chars; stay under it with margin.
 MAXBYTES=9000
 
+# --update compares vault copies with local files here; removed on exit.
+CMP_DIR="$(mktemp -d)"; chmod 700 "$CMP_DIR"
+trap 'rm -rf "$CMP_DIR"' EXIT
+
+update_note() {   # name, file, item id
+  local name="$1" file="$2" id="$3" vault="$CMP_DIR/note"
+  if ! bws get notes "$id" > "$vault" 2>/dev/null; then echo "FAILED: $name (could not read vault copy)"; return 0; fi
+  if cmp -s "$vault" "$file"; then echo "unchanged: $name"; return 0; fi
+  if [ "$(wc -c < "$file")" -gt "$MAXBYTES" ]; then
+    echo "SKIP (changed, but now too large for a note — mark it 'file' in secrets-manifest.sh): $name"
+    return 0
+  fi
+  if bws get item "$id" | jq --rawfile c "$file" '.notes=$c' \
+       | bws encode | bws edit item "$id" >/dev/null 2>&1; then
+    echo "updated: $name"
+  else
+    echo "FAILED: $name (update failed; vault copy left as it was)"
+  fi
+}
+
+update_file() {   # name, file, item id
+  local name="$1" file="$2" id="$3" vault="$CMP_DIR/file" old
+  if ! bws get attachment "${file:t}" --itemid "$id" --output "$vault" >/dev/null 2>&1; then
+    echo "FAILED: $name (could not read vault attachment)"; return 0
+  fi
+  if cmp -s "$vault" "$file"; then echo "unchanged: $name"; return 0; fi
+  # upload the new copy first, then delete the old one, so a failed upload
+  # never leaves the item without its attachment
+  old="$(bws get item "$id" | jq -r --arg f "${file:t}" '.attachments[]? | select(.fileName==$f) | .id')"
+  if ! bws create attachment --file "$file" --itemid "$id" >/dev/null 2>&1; then
+    echo "FAILED: $name (upload failed; vault copy left as it was)"; return 0
+  fi
+  local a
+  for a in ${(f)old}; do
+    bws delete attachment "$a" --itemid "$id" >/dev/null 2>&1 || {
+      echo "FAILED: $name (new copy uploaded, but the old attachment could not be removed — delete it in Bitwarden, or restore will stop at 'more than one')"
+      return 0
+    }
+  done
+  echo "updated: $name (attachment)"
+}
+
 new_note() {   # name, body -> prints new item id
   bws get template item \
     | jq --arg n "$1" --arg f "$FID" --arg c "$2" \
@@ -64,8 +118,12 @@ new_note() {   # name, body -> prints new item id
 }
 
 add_note() {
-  local name="$1" file="$2"
-  if [ -n "$(lookup "$name" 2)" ]; then echo "exists: $name"; return 0; fi
+  local name="$1" file="$2" id
+  id="$(lookup "$name" 2)"
+  if [ -n "$id" ]; then
+    if [ "$UPDATE" = 1 ]; then update_note "$name" "$file" "$id"; else echo "exists: $name"; fi
+    return 0
+  fi
   if [ "$(wc -c < "$file")" -gt "$MAXBYTES" ]; then
     echo "SKIP (too large for a note — mark it 'file' in secrets-manifest.sh): $name"
     return 0
@@ -84,7 +142,10 @@ add_note() {
 add_file() {
   local name="$1" file="$2" id
   id="$(lookup "$name" 2)"
-  if [ -n "$id" ] && [ "$(lookup "$name" 3)" -gt 0 ]; then echo "exists: $name"; return 0; fi
+  if [ -n "$id" ] && [ "$(lookup "$name" 3)" -gt 0 ]; then
+    if [ "$UPDATE" = 1 ]; then update_file "$name" "$file" "$id"; else echo "exists: $name"; fi
+    return 0
+  fi
   # the note body only says where the file lives; the content is the attachment
   [ -n "$id" ] || id="$(new_note "$name" "attachment: ${file:t} -> ~/${file#$HOME/}" 2>/dev/null)" || id=""
   if [ -n "$id" ] && bws create attachment --file "$file" --itemid "$id" >/dev/null 2>&1; then
