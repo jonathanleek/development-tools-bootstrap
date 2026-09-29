@@ -12,6 +12,7 @@ DIRS=(
   astronomer/customers
   astronomer/examples
   astronomer/internal
+  astronomer/tools
   apache
   arch-reactor
 )
