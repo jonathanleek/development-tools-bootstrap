@@ -12,14 +12,16 @@ DIRS=(
   astronomer/customers
   astronomer/examples
   astronomer/internal
+  astronomer/tools
   apache
   arch-reactor
+  openstl
 )
 
 # mi6 (https://github.com/jonathanleek/mi6) is a Go module; `go` comes from
 # the Brewfile. `go install` puts the binary in $GOBIN, or $GOPATH/bin, or
-# ~/go/bin. Put that on the PATH for this script; the shell dotfiles do it
-# for interactive sessions.
+# ~/go/bin. Put that on the PATH for this script; setup.sh adds it to
+# ~/.zprofile for later shells.
 export PATH="${GOBIN:-$(go env GOPATH 2>/dev/null || print "$HOME/go")/bin}:$PATH"
 if ! command -v mi6 >/dev/null 2>&1; then
   print "Installing mi6..."

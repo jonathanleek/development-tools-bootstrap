@@ -1,4 +1,18 @@
 {
+  "extraKnownMarketplaces": {
+    "astronomer": {
+      "source": {
+        "source": "github",
+        "repo": "astronomer/agents"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
   "enabledPlugins": {
     "astronomer-data@astronomer": true
   },
