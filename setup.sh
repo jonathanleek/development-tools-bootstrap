@@ -128,6 +128,11 @@ tfenv use latest
 # ---------------------------------------------------------------------------
 log "Creating directory structure..."
 "$SCRIPT_DIR/scripts/make-dirs.sh"
+# mi6 is installed with `go install` into ~/go/bin. Put it on PATH in login
+# shells, which is what Termic and other agent launchers spawn.
+if ! grep -q 'go/bin' "$HOME/.zprofile" 2>/dev/null; then
+  print 'export PATH="$HOME/go/bin:$PATH"   # go install (mi6)' >> "$HOME/.zprofile"
+fi
 
 # ---------------------------------------------------------------------------
 # 9. Start background services
