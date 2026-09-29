@@ -12,7 +12,8 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `Brewfile` | All CLI tools, apps, fonts, and App Store apps (`brew bundle`) |
 | `scripts/macos.sh` | Sensible macOS system defaults (`defaults write`) |
 | `scripts/bootstrap-keys.sh` | Generates an SSH key and registers it with GitHub |
-| `scripts/restore-secrets.sh` | Restores secrets from Bitwarden (pulls + runs the stored `restore-script` note) |
+| `scripts/secrets-manifest.sh` | The list of secrets kept in Bitwarden (name, path, mode, note vs. attachment) |
+| `scripts/backup-secrets-to-bw.sh` / `scripts/restore-secrets-from-bw.sh` | Back up / restore everything in the manifest |
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure, installs `mi6`, and gives every folder a `.mi6/` layer |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
@@ -33,19 +34,26 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 8. Creates the `~/Documents/git/<org>/` directory structure and runs `mi6 init` on every folder (installing `mi6` with `go install` first).
 9. Starts the `ollama` service.
 10. Applies macOS defaults.
-11. Restores secrets from Bitwarden (SSH keys, `gh` token, homelab secrets) — interactive.
+11. Restores secrets from Bitwarden (SSH keys, AWS/Docker config, homelab secrets and Terraform state) — interactive.
 12. Generates an SSH key and adds it to GitHub (reuses a restored key if present).
 13. Clones the Obsidian/data vaults and registers them with Obsidian.
 14. Reproduces the Claude Code environment.
 
 ### Secret restore (step 11)
 
-Requires `bw` (in the Brewfile) and that you previously stored a `restore-script`
-Secure Note in a Bitwarden "Mac Migration" folder. The step prompts for your
-Bitwarden login/unlock (never stored), pulls the note, and writes each secret to
-its real path with correct permissions. Skippable — Ctrl-C the prompt to defer.
-Terraform `.tfstate` files, WireGuard tunnels, and the Anthropic API key are
-**not** covered (move those manually).
+Runs `scripts/restore-secrets-from-bw.sh`, which restores everything listed in
+`scripts/secrets-manifest.sh` from the Bitwarden "Mac Migration" folder, with
+correct permissions. It prompts for your Bitwarden login/unlock (never stored)
+unless `BW_SESSION` is already set, and skips any file that already exists.
+Skippable — Ctrl-C the prompt to defer.
+
+Populate the vault first by running `scripts/backup-secrets-to-bw.sh` on the old
+machine. Small files are stored as Secure Note bodies; large ones (Terraform
+`.tfstate`, etc.) as attachments, which need Bitwarden Premium. Items are matched
+by exact name inside the folder.
+
+WireGuard tunnels, the Anthropic API key, and GitHub CLI auth (`gh auth login`)
+are **not** covered (set those up manually).
 
 ## To run
 

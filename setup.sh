@@ -146,8 +146,8 @@ log "Applying macOS defaults..."
 #     Runs before key/vault steps so restored GitHub auth is available.
 # ---------------------------------------------------------------------------
 log "Restoring secrets from Bitwarden..."
-"$SCRIPT_DIR/scripts/restore-secrets.sh" || \
-  log "Secret restore skipped — run scripts/restore-secrets.sh later"
+"$SCRIPT_DIR/scripts/restore-secrets-from-bw.sh" || \
+  log "Secret restore skipped — run scripts/restore-secrets-from-bw.sh later"
 
 # ---------------------------------------------------------------------------
 # 12. SSH key + GitHub (reuses a restored key if present; else generates one)
