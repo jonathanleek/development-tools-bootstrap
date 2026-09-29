@@ -52,6 +52,10 @@ machine. Small files are stored as Secure Note bodies; large ones (Terraform
 `.tfstate`, etc.) as attachments, which need Bitwarden Premium. Items are matched
 by exact name inside the folder.
 
+The backup only adds items that aren't in the vault yet. Run it with `--update`
+after a `terraform apply` or after rotating a key: it compares each existing
+item with the local file and replaces the ones that changed.
+
 WireGuard tunnels, the Anthropic API key, and GitHub CLI auth (`gh auth login`)
 are **not** covered (set those up manually).
 
