@@ -18,7 +18,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
 | `dotfiles/` + `scripts/dotfiles.sh` | Shell dotfiles, symlinked into `$HOME` (see below) |
-| `claude/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
+| `claude-config/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
 ## Dotfiles
 
@@ -81,7 +81,7 @@ chmod +x setup.sh
 Individual pieces can be run on their own, e.g. `./scripts/macos.sh`,
 `./scripts/vaults.sh`, `./scripts/claude-env.sh`, or `brew bundle`.
 
-## Claude Code environment (`claude/` + `scripts/claude-env.sh`)
+## Claude Code environment (`claude-config/` + `scripts/claude-env.sh`)
 
 Reproduces the personal Claude setup:
 - Adds the `astronomer/agents` and `anthropics/claude-plugins-official` marketplaces.

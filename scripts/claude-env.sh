@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO="${0:A:h:h}"          # repo root (scripts/ is one level down)
-TPL="$REPO/claude"
+TPL="$REPO/claude-config"
 CLAUDE_DIR="$HOME/.claude"
 log() { print -P "%F{cyan}==>%f $*"; }
 
