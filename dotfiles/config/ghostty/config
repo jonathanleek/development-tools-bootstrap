@@ -8,8 +8,9 @@
 # Nerd Font glyphs for the powerlevel10k prompt
 font-family = Hack Nerd Font
 font-size = 14
-# Follows macOS light/dark mode
-theme = dark:Catppuccin Mocha,light:Catppuccin Latte
+# Pinned dark: the quick terminal ignores light/dark conditional themes and
+# falls back to the light variant. Was: dark:Catppuccin Mocha,light:Catppuccin Latte
+theme = Catppuccin Mocha
 window-padding-x = 8
 window-padding-y = 6
 macos-titlebar-style = tabs
