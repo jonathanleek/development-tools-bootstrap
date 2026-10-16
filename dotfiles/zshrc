@@ -22,6 +22,10 @@ export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
+# Google Cloud SDK (installed outside brew, in ~/google-cloud-sdk)
+[[ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]] && source "$HOME/google-cloud-sdk/path.zsh.inc"
+[[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]] && source "$HOME/google-cloud-sdk/completion.zsh.inc"
+
 # Start Claude Code under the mi6 config stack for the current folder.
 # `mi6 --bare claude` (or `command claude`) starts it with plain ~/.claude.
 alias claude='mi6 claude'

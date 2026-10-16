@@ -11,6 +11,14 @@ export PATH="$HOME/.local/bin:$PATH"
 # go install (mi6)
 export PATH="$HOME/go/bin:$PATH"
 
+# JetBrains Toolbox shell scripts (pycharm, datagrip, ...)
+JB_SCRIPTS="$HOME/Library/Application Support/JetBrains/Toolbox/scripts"
+[[ -d "$JB_SCRIPTS" ]] && export PATH="$PATH:$JB_SCRIPTS"
+unset JB_SCRIPTS
+
+# LM Studio CLI (lms)
+[[ -d "$HOME/.lmstudio/bin" ]] && export PATH="$PATH:$HOME/.lmstudio/bin"
+
 # Added by OrbStack: command-line tools and integration
 # This won't be added again if you remove it.
 source ~/.orbstack/shell/init.zsh 2>/dev/null || :
