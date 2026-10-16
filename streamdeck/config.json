@@ -7,8 +7,9 @@
   "vault": {
     "path": "~/Documents/git/astronomer/astronomer-vault",
     "name": "astronomer-vault",
-    "clients_dir": "! Clients/Active",
-    "client_note": "Client Info"
+    "client_note": "Client Info",
+    "clients_root": "! Clients",
+    "_comment": "Client notes live at <clients_root>/<Active|Inactive>/<Client>/<client_note>.md; the Active/Inactive folder in Obsidian is the source of truth for the deck."
   },
   "customer_notes": {
     "_comment": "customer folder name -> client note folder in the vault, for the ones slug-prefix matching gets wrong"

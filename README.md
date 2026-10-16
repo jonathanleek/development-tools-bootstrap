@@ -114,9 +114,11 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
 - **Home**: Astronomer, Meeting, Gridfinity, Rescan. No dials.
 - **Astronomer** walks `~/Documents/git/astronomer` one page per folder down
   to each git repo: Ghostty here, PyCharm, Finder. **Customers** is the union
-  of `customers/` folders and the Astronomer vault's `! Clients/Active` notes;
-  each customer page has Notes (Obsidian), Finder, Slack Internal / External,
-  and its repos. Slack channels come from the client's `Client Info` note —
+  of `customers/` folders and the Astronomer vault's `! Clients` notes, and the
+  vault's Active / Inactive folders decide where a customer shows: Active ones
+  on the Customers pages, Inactive ones behind an **Inactive ▸** key placed
+  last so it sits on the final page. Each customer page has Notes (Obsidian),
+  Finder, Slack Internal / External, and its repos. Slack channels come from the client's `Client Info` note —
   rows `Slack (internal)` / `Slack (external)` holding `#channel-name` (looked
   up in `streamdeck/slack-channels.json`; add a line for a new name) or a
   channel link.

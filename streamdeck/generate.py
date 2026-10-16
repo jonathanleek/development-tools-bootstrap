@@ -65,6 +65,7 @@ C_BASE = "#1e2227"
 C_FOLDER = "#2b3340"
 C_REPO = "#1f4f4a"
 C_CUSTOMER = "#5a3d14"
+C_INACTIVE = "#3b3228"
 C_HOME = "#30343a"
 C_ACCENT = "#c7781c"
 C_TEXT = "#f2f2f2"
@@ -343,13 +344,14 @@ def folder_page(profile: Profile, path: Path) -> Page:
     return page
 
 
-def vault_clients() -> dict[str, str]:
-    """slug -> note folder name under the vault's Active clients dir."""
+def vault_clients(section: str) -> dict[str, str]:
+    """slug -> note folder name under the vault's clients root for one section
+    ("Active" / "Inactive"). Obsidian's folder is the source of truth."""
     v = CONFIG["vault"]
-    active = expand(v["path"]) / v["clients_dir"]
-    if not active.is_dir():
+    root = expand(v["path"]) / v["clients_root"] / section
+    if not root.is_dir():
         return {}
-    return {slug(c.name): c.name for c in subdirs(active)}
+    return {slug(c.name): c.name for c in subdirs(root)}
 
 
 def match_client(folder: str, clients: dict[str, str]) -> str | None:
@@ -365,11 +367,14 @@ def match_client(folder: str, clients: dict[str, str]) -> str | None:
 
 @dataclass
 class Customer:
-    """One customer as the deck sees it: a folder, a vault note folder, or both."""
+    """One customer as the deck sees it: a folder, a vault note folder, or both.
+    `section` is the vault folder the note sits in (Active / Inactive); a
+    folder with no note counts as active, since it has live work."""
 
     label: str
     folder: Path | None
     note_folder: str | None
+    section: str = "Active"
 
     @property
     def key(self) -> str:
@@ -380,15 +385,23 @@ class Customer:
         parts = (["notes"] if self.note_folder else []) + (["repos"] if self.folder else [])
         return " + ".join(parts)
 
+    @property
+    def note(self) -> str | None:
+        """Vault-relative path of the Client Info note, without .md."""
+        if not self.note_folder:
+            return None
+        v = CONFIG["vault"]
+        return f"{v['clients_root']}/{self.section}/{self.note_folder}/{v['client_note']}"
 
-def slack_channels(note_folder: str | None) -> dict[str, str]:
+
+def slack_channels(c: Customer) -> dict[str, str]:
     """Channel IDs from the client's Client Info note: table rows named
-    "Slack (internal)" / "Slack (external)" holding a Slack channel link
-    (https://<workspace>.slack.com/archives/C...). Missing or blank = no key."""
-    if not note_folder:
+    "Slack (internal)" / "Slack (external)" holding a #channel-name or a
+    channel link (https://<workspace>.slack.com/archives/C...). Missing or
+    blank = no key."""
+    if not c.note:
         return {}
-    v = CONFIG["vault"]
-    note = expand(v["path"]) / v["clients_dir"] / note_folder / f"{v['client_note']}.md"
+    note = expand(CONFIG["vault"]["path"]) / f"{c.note}.md"
     if not note.is_file():
         return {}
     out: dict[str, str] = {}
@@ -424,15 +437,13 @@ def resolve_channel(cell: str, note: Path) -> str | None:
 
 
 def customer_page(profile: Profile, c: Customer) -> Page:
-    v = CONFIG["vault"]
     page = profile.page(f"customer:{c.key}", c.label)
     entries: list[Key] = []
-    if c.note_folder:
-        note = f"{v['clients_dir']}/{c.note_folder}/{v['client_note']}"
-        entries.append(obsidian_key(v["name"], note, ["Notes"]))
+    if c.note:
+        entries.append(obsidian_key(CONFIG["vault"]["name"], c.note, ["Notes"]))
     if c.folder:
         entries.append(finder_key(c.folder))
-    channels = slack_channels(c.note_folder)
+    channels = slack_channels(c)
     if channels.get("internal"):
         entries.append(slack_key(channels["internal"], "Internal"))
     if channels.get("external"):
@@ -443,28 +454,44 @@ def customer_page(profile: Profile, c: Customer) -> Page:
     return page
 
 
-def customers(path: Path) -> list[Customer]:
-    """Union of customer folders and the vault's Active client notes."""
-    clients = vault_clients()
+def customers(path: Path) -> tuple[list[Customer], list[Customer]]:
+    """(active, inactive): the union of customer folders and the vault's client
+    notes, split by which vault section the note is in."""
+    active_notes, inactive_notes = vault_clients("Active"), vault_clients("Inactive")
     out: list[Customer] = []
     seen: set[str] = set()
     for c in subdirs(path):
-        note = match_client(c.name, clients)
+        note = match_client(c.name, active_notes)
+        section = "Active"
+        if not note:
+            note = match_client(c.name, inactive_notes)
+            section = "Inactive" if note else "Active"
         if note:
             seen.add(slug(note))
-        out.append(Customer(note or c.name, c, note))
-    for cs, name in clients.items():
-        if cs not in seen:
-            out.append(Customer(name, None, name))
-    return sorted(out, key=lambda c: c.label.lower())
+        out.append(Customer(note or c.name, c, note, section))
+    for section, notes in (("Active", active_notes), ("Inactive", inactive_notes)):
+        for cs, name in notes.items():
+            if cs not in seen:
+                out.append(Customer(name, None, name, section))
+    out.sort(key=lambda c: c.label.lower())
+    return [c for c in out if c.section == "Active"], [c for c in out if c.section == "Inactive"]
+
+
+def customer_key(profile: Profile, c: Customer) -> Key:
+    bg = C_CUSTOMER if c.section == "Active" else C_INACTIVE
+    return folder_key(customer_page(profile, c), tile(wrap(c.label), bg, footer=c.footer))
 
 
 def customers_page(profile: Profile, path: Path) -> Page:
+    """Active customers, then Inactive ▸ as the very last entry so it lands on
+    the last page rather than spending a key up front."""
     page = profile.page(f"customers:{path}", "Customers")
-    entries = [
-        folder_key(customer_page(profile, c), tile(wrap(c.label), C_CUSTOMER, footer=c.footer))
-        for c in customers(path)
-    ]
+    active, inactive = customers(path)
+    entries = [customer_key(profile, c) for c in active]
+    if inactive:
+        inactive_page = profile.page(f"customers-inactive:{path}", "Inactive customers")
+        place(profile, inactive_page, [customer_key(profile, c) for c in inactive], f"customers-inactive:{path}")
+        entries.append(folder_key(inactive_page, tile(["Inactive ▸"], C_FOLDER, footer=f"{len(inactive)} customers")))
     place(profile, page, entries, f"customers:{path}")
     return page
 
