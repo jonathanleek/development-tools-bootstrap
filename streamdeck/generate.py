@@ -396,10 +396,31 @@ def slack_channels(note_folder: str | None) -> dict[str, str]:
         m = re.match(r"\|\s*Slack\s*\((internal|external)\)\s*\|(.*)", line, re.I)
         if not m:
             continue
-        cid = re.search(r"/archives/(C[A-Z0-9]+)", m.group(2))
+        cid = resolve_channel(m.group(2), note)
         if cid:
-            out[m.group(1).lower()] = cid.group(1)
+            out[m.group(1).lower()] = cid
     return out
+
+
+_CHANNELS: dict[str, str] | None = None
+
+
+def resolve_channel(cell: str, note: Path) -> str | None:
+    """A table cell holding either a channel link (…/archives/C…) or a
+    #channel-name, looked up in streamdeck/slack-channels.json."""
+    global _CHANNELS
+    link = re.search(r"/archives/(C[A-Z0-9]+)", cell)
+    if link:
+        return link.group(1)
+    name = re.search(r"#([a-z0-9][a-z0-9._-]*)", cell, re.I)
+    if not name:
+        return None
+    if _CHANNELS is None:
+        _CHANNELS = {k: v for k, v in json.loads((HERE / "slack-channels.json").read_text()).items() if not k.startswith("_")}
+    cid = _CHANNELS.get(name.group(1).lower())
+    if not cid:
+        print(f"warning: #{name.group(1)} in {note.name} ({note.parent.name}) is not in slack-channels.json; no key", file=sys.stderr)
+    return cid
 
 
 def customer_page(profile: Profile, c: Customer) -> Page:
