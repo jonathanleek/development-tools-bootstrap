@@ -10,8 +10,6 @@
 # ===========================================================================
 # Third-party taps
 # ===========================================================================
-tap "cordwainersmith/claudoscope"                 # Claudoscope (upstream author's tap)
-tap "migsilva89/loadout"                          # Loadout (upstream author's tap)
 tap "simion/termic"                               # Termic (upstream author's tap)
 
 # ===========================================================================
@@ -27,6 +25,7 @@ brew "go"                                         # needed for `go install` of m
 brew "just"                                       # command runner
 brew "pre-commit"                                 # git hook framework
 brew "ansible"
+brew "openbao"                                    # `bao` CLI — homelab secrets (OpenBao)
 brew "astro"                                      # Astronomer / Airflow CLI
 brew "awscli"
 brew "ollama"                                     # run local LLMs (CLI + server)
@@ -56,8 +55,6 @@ cask "claude"                                     # Claude desktop app
 # /opt/homebrew/bin, which wins in PATH over the self-updating native install
 # at ~/.local/bin and silently pins you to an old CLI. Install it with:
 #   curl -fsSL https://claude.ai/install.sh | bash
-cask "cordwainersmith/claudoscope/claudoscope"    # Claude Code session dashboard
-cask "migsilva89/loadout/loadout"                 # Loadout — Claude Code skills/agents/MCP manager
 cask "simion/termic/termic"                       # Termic — run coding agents in parallel git worktrees
 cask "lm-studio"                                  # LM Studio — run local LLMs
 
@@ -104,7 +101,6 @@ cask "balenaetcher"
 # ===========================================================================
 cask "hovrly"                                     # menu-bar world clock
 cask "amazon-workspaces"                          # remote desktop
-cask "tableau-public"                             # data visualization
 
 # ===========================================================================
 # Mac App Store — essentials (requires being signed into the App Store)
@@ -112,12 +108,10 @@ cask "tableau-public"                             # data visualization
 # ===========================================================================
 mas "Fantastical",  id: 975937182
 mas "Magnet",       id: 441258766
-mas "Amphetamine",  id: 937984704
 mas "Okta Verify",  id: 490179405
 
 # ---- Mac App Store — optional / personal ----
 mas "Kindle",               id: 302584613
 mas "Copilot",              id: 1447330651
 mas "iMovie",               id: 408981434
-mas "Brother iPrint&Scan",  id: 1193539993
 mas "Simple Mouse Locator", id: 946676425
