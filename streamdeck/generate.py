@@ -425,7 +425,7 @@ def home_page(profile: Profile) -> Page:
     home.keys[(1, 0)] = folder_key(meeting_page(profile), tile(["Meeting"], C_HOME, app_icon("zoom.us")))
     home.keys[(2, 0)] = folder_key(gridfinity_page(profile), tile(["Gridfinity"], C_ACCENT))
     home.keys[(3, 0)] = launch_key(
-        ["/opt/homebrew/bin/uv", "run", "--quiet", str(HERE / "generate.py"), "--install"],
+        ["/opt/homebrew/bin/uv", "run", "--quiet", str(HERE / "generate.py"), "--install", "--restart"],
         tile(["Rescan"], C_HOME, footer="navigator"),
         cwd=str(REPO),
     )
