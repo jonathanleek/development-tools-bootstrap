@@ -14,7 +14,8 @@ Pages are derived, not hand-placed:
 - Astronomer: walks ~/Documents/git/astronomer one page per folder. A folder
   that is a git repo gets a repo page (Ghostty here, PyCharm, Finder). The
   customers folder is the union of customer folders and the vault's Active
-  client notes; a customer page adds an Obsidian key for its Client Info note.
+  client notes; a customer page adds an Obsidian key for its Client Info note
+  and Slack keys for the channel links kept in that note.
 - Meeting and Gridfinity are fixed layouts (see pages_fixed()).
 
 Every page gets a deterministic UUID from its path, so re-running rewrites the
@@ -380,6 +381,27 @@ class Customer:
         return " + ".join(parts)
 
 
+def slack_channels(note_folder: str | None) -> dict[str, str]:
+    """Channel IDs from the client's Client Info note: table rows named
+    "Slack (internal)" / "Slack (external)" holding a Slack channel link
+    (https://<workspace>.slack.com/archives/C...). Missing or blank = no key."""
+    if not note_folder:
+        return {}
+    v = CONFIG["vault"]
+    note = expand(v["path"]) / v["clients_dir"] / note_folder / f"{v['client_note']}.md"
+    if not note.is_file():
+        return {}
+    out: dict[str, str] = {}
+    for line in note.read_text(errors="replace").splitlines():
+        m = re.match(r"\|\s*Slack\s*\((internal|external)\)\s*\|(.*)", line, re.I)
+        if not m:
+            continue
+        cid = re.search(r"/archives/(C[A-Z0-9]+)", m.group(2))
+        if cid:
+            out[m.group(1).lower()] = cid.group(1)
+    return out
+
+
 def customer_page(profile: Profile, c: Customer) -> Page:
     v = CONFIG["vault"]
     page = profile.page(f"customer:{c.key}", c.label)
@@ -389,7 +411,7 @@ def customer_page(profile: Profile, c: Customer) -> Page:
         entries.append(obsidian_key(v["name"], note, ["Notes"]))
     if c.folder:
         entries.append(finder_key(c.folder))
-    channels = CONFIG["slack"]["customers"].get(c.key, {})
+    channels = slack_channels(c.note_folder)
     if channels.get("internal"):
         entries.append(slack_key(channels["internal"], "Internal"))
     if channels.get("external"):
