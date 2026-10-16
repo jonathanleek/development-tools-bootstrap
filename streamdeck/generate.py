@@ -16,7 +16,7 @@ Pages are derived, not hand-placed:
   customers folder is the union of customer folders and the vault's Active
   client notes; a customer page adds an Obsidian key for its Client Info note
   and Slack keys for the channel links kept in that note.
-- Meeting and Gridfinity are fixed layouts (see pages_fixed()).
+- Meeting and Gridfinity are fixed layouts.
 
 Every page gets a deterministic UUID from its path, so re-running rewrites the
 same profile in place instead of creating a duplicate. The previous profile
@@ -572,28 +572,14 @@ def meeting_keys(profile: Profile, page: Page, key: str) -> None:
 
 
 def meeting_page(profile: Profile) -> Page:
-    """Folder version, opened from Home: (0,0) is Back, so the seven keys above are all of it."""
+    """Opened from Home like every other page; (0,0) is Back. The rarer Zoom
+    actions (raise hand, react, record, share mode, mute all) are not on the
+    deck: an app-triggered Zoom profile was tried and dropped, since the
+    Astronomer pages are needed during calls."""
     page = profile.page("meeting", "Meeting")
     page.keys[(0, 0)] = back()
     meeting_keys(profile, page, "meeting")
     return page
-
-
-def zoom_app_profile() -> tuple[Profile, Page]:
-    """Separate profile the app switches to while Zoom is frontmost. No Back
-    needed, so (0,0) opens a More page with the rarer Zoom actions."""
-    profile = Profile()
-    page = profile.page("meeting-app", "Meeting")
-    meeting_keys(profile, page, "meeting-app")
-    more = profile.page("meeting-app/more", "Meeting (more)")
-    more.keys[(0, 0)] = back()
-    more.keys[(1, 0)] = zoom_key("raisehand", 2)
-    more.keys[(2, 0)] = zoom_key("react", 1)
-    more.keys[(3, 0)] = zoom_key("record", 3)
-    more.keys[(1, 1)] = zoom_key("sharemode", 1)
-    more.keys[(3, 1)] = zoom_key("muteall", 1)
-    page.keys[(0, 0)] = folder_key(more, tile(["More ▸"], C_FOLDER))
-    return profile, page
 
 
 def home_page(profile: Profile) -> Page:
@@ -750,11 +736,7 @@ def load_sticky(targets: list[Target]) -> None:
 def build() -> tuple[list[Target], str]:
     main = Profile()
     home = home_page(main)
-    zoom, zoom_home = zoom_app_profile()
-    targets = [
-        Target("profile", CONFIG["profile_name"], main, home),
-        Target("profile-zoom", f"{CONFIG['profile_name']} (Zoom)", zoom, zoom_home, CONFIG["zoom_bundle_id"]),
-    ]
+    targets = [Target("profile", CONFIG["profile_name"], main, home)]
     load_sticky(targets)
     dev_uuid, model = device()
     if BUILD.exists():
@@ -764,8 +746,18 @@ def build() -> tuple[list[Target], str]:
     return targets, dev_uuid
 
 
+RETIRED = ["profile-zoom"]  # profiles this generator used to emit; moved aside on install
+
+
 def install(targets: list[Target], dev_uuid: str, set_default: bool) -> None:
     stamp = time.strftime("%Y%m%d%H%M%S")
+    for key in RETIRED:
+        old = PROFILES_DIR / f"{page_uuid(key).upper()}.sdProfile"
+        if old.exists():
+            dest = BACKUPS / stamp / old.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old), str(dest))
+            print(f"retired {old.name} -> {dest}")
     for t in targets:
         if t.installed.exists():
             dest = BACKUPS / stamp / t.installed.name

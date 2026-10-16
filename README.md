@@ -120,12 +120,11 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
   rows `Slack (internal)` / `Slack (external)` holding `#channel-name` (looked
   up in `streamdeck/slack-channels.json`; add a line for a new name) or a
   channel link.
-- **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave; more on
-  a second page) plus Face / Whiteboard / Desk and zoom / pan / tilt dials,
-  which send Insta360 Link Controller's global shortcuts. Emitted twice: as a
-  folder off Home and as a profile tied to Zoom's bundle id, so the deck
-  switches to it while Zoom is frontmost. Zoom key settings edited in the
-  app (which monitor to share) are preserved across rescans.
+- **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave) plus
+  Meeting / Whiteboard / Desk and zoom / pan / tilt dials, which send Insta360
+  Link Controller's global shortcuts. Deliberately a folder off Home rather
+  than a Zoom-triggered profile, so the Astronomer pages stay reachable
+  during calls. The Share Screen monitor is preserved across rescans.
 - **Gridfinity**: dials set X / Y / height, keys toggle label shelf and
   scoop and generate a bin or baseplate (STL + STEP) onto the Workshop share.
   The plugin lives in `westbound-workshop/inventory-kiosk/streamdeck-plugin`
