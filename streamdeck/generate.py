@@ -779,8 +779,25 @@ def quit_app() -> None:
     subprocess.run(["osascript", "-e", 'tell application "Elgato Stream Deck" to quit'], check=False, capture_output=True)
     for _ in range(50):
         if subprocess.run(["pgrep", "-x", "Stream Deck"], capture_output=True).returncode != 0:
-            return
+            break
         time.sleep(0.2)
+    else:
+        subprocess.run(["pkill", "-x", "Stream Deck"], check=False)  # stuck on a modal dialog
+        time.sleep(1)
+    reset_session_report()
+
+
+def reset_session_report() -> None:
+    """The app remembers how many actions the last session had and, if the
+    next launch loads fewer, offers to restore its daily backup ("data loss
+    detected"). A rescan that drops a page would trigger that every time, so
+    zero the remembered count while the app is quit."""
+    raw = subprocess.run(["defaults", "export", "com.elgato.StreamDeck", "-"], check=True, capture_output=True).stdout
+    prefs = plistlib.loads(raw)
+    report = prefs.get("last_app_session_report")
+    if isinstance(report, dict) and report.get("action_count"):
+        report["action_count"] = 0
+        subprocess.run(["defaults", "import", "com.elgato.StreamDeck", "-"], check=True, input=plistlib.dumps(prefs))
 
 
 def main() -> None:
