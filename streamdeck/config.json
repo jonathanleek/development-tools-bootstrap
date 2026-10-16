@@ -19,5 +19,69 @@
     "finder": "Finder",
     "obsidian": "Obsidian"
   },
-  "kiosk_repo": "~/Documents/git/westbound-workshop/inventory-kiosk"
+  "kiosk_repo": "~/Documents/git/westbound-workshop/inventory-kiosk",
+  "slack": {
+    "_comment": "Astronomer workspace. Channel IDs per customer (slug of the vault client name, else the folder name): #internal_<x> and the shared #astro_<x>. Found via Slack search; add new customers here.",
+    "team": "T0A5WHQCE0P",
+    "customers": {
+      "athena-health": {
+        "internal": "C08G3K98ZD5",
+        "external": "C08G3K96EQP"
+      },
+      "brookfield-technology-services": {
+        "internal": "C0AT2QM280M",
+        "external": "C0AU0EZ2S5N"
+      },
+      "epic-games": {
+        "internal": "C064B2U1Z1S",
+        "external": "C0BKCS4QY9G"
+      },
+      "faire": {
+        "internal": "C03NLHQ4U68",
+        "external": null
+      },
+      "farmers": {
+        "internal": "C091Q9LSZSL",
+        "external": "C09AE208AN9"
+      },
+      "first-citizens-bank": {
+        "internal": "C0AB7CNAJ77",
+        "external": "C0AC54N5NPJ"
+      },
+      "mcdonalds": {
+        "internal": "C06SF04CK8D",
+        "external": "C07JVL7S2DA"
+      },
+      "mizuho": {
+        "internal": "C08TJP6TJLB",
+        "external": "C08TUC3E858"
+      },
+      "moloco": {
+        "internal": "C0734CB9SP3",
+        "external": "C0BJGC71PCM"
+      },
+      "nj-courts": {
+        "internal": "C0AM5M60DB8",
+        "external": "C0ALS9LUP39"
+      }
+    }
+  },
+  "camera": {
+    "_comment": "Insta360 Link Controller global shortcuts (Settings > Shortcut key, Global Shortcuts on). Every key below is pressed with these modifiers; left/right/up/down are the gimbal nudges.",
+    "app": "Insta360 Link Controller",
+    "modifiers": [
+      "ctrl",
+      "option",
+      "cmd"
+    ],
+    "keys": {
+      "face": "1",
+      "whiteboard": "2",
+      "desk": "3",
+      "center": "0",
+      "zoom_in": "=",
+      "zoom_out": "-"
+    }
+  },
+  "zoom_bundle_id": "us.zoom.xos"
 }

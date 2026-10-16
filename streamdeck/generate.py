@@ -271,6 +271,24 @@ def obsidian_key(vault: str, note: str | None, label: list[str]) -> Key:
     return launch_key(["/usr/bin/open", url], tile(label, C_BASE, app_icon(CONFIG["apps"]["obsidian"])))
 
 
+def slack_key(channel_id: str, label: str) -> Key:
+    team = CONFIG["slack"]["team"]
+    url = f"slack://channel?team={team}&id={channel_id}"
+    return launch_key(["/usr/bin/open", url], tile([label], C_BASE, app_icon("Slack")))
+
+
+def logo_tile(name: str, bg: str) -> Image.Image:
+    """A key showing streamdeck/icons/<name>.png scaled to fit, no text."""
+    img = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
+    ImageDraw.Draw(img).rounded_rectangle((0, 0, TILE - 1, TILE - 1), 22, fill=bg)
+    mark = Image.open(HERE / "icons" / f"{name}.png").convert("RGBA")
+    mark = mark.crop(mark.getbbox() or (0, 0, *mark.size))
+    s = min(104 / mark.width, 104 / mark.height)
+    mark = mark.resize((max(1, int(mark.width * s)), max(1, int(mark.height * s))))
+    img.alpha_composite(mark, ((TILE - mark.width) // 2, (TILE - mark.height) // 2))
+    return img
+
+
 # ---- navigator ---------------------------------------------------------------
 
 
@@ -344,37 +362,67 @@ def match_client(folder: str, clients: dict[str, str]) -> str | None:
     return None
 
 
-def customer_page(profile: Profile, path: Path, note_folder: str | None) -> Page:
+@dataclass
+class Customer:
+    """One customer as the deck sees it: a folder, a vault note folder, or both."""
+
+    label: str
+    folder: Path | None
+    note_folder: str | None
+
+    @property
+    def key(self) -> str:
+        return slug(self.note_folder or self.folder.name)
+
+    @property
+    def footer(self) -> str:
+        parts = (["notes"] if self.note_folder else []) + (["repos"] if self.folder else [])
+        return " + ".join(parts)
+
+
+def customer_page(profile: Profile, c: Customer) -> Page:
     v = CONFIG["vault"]
-    page = profile.page(f"customer:{path}", path.name)
+    page = profile.page(f"customer:{c.key}", c.label)
     entries: list[Key] = []
-    if note_folder:
-        note = f"{v['clients_dir']}/{note_folder}/{v['client_note']}"
+    if c.note_folder:
+        note = f"{v['clients_dir']}/{c.note_folder}/{v['client_note']}"
         entries.append(obsidian_key(v["name"], note, ["Notes"]))
-    entries.append(finder_key(path))
-    entries += [entry_key(profile, c) for c in subdirs(path)]
-    place(profile, page, entries, f"customer:{path}")
+    if c.folder:
+        entries.append(finder_key(c.folder))
+    channels = CONFIG["slack"]["customers"].get(c.key, {})
+    if channels.get("internal"):
+        entries.append(slack_key(channels["internal"], "Internal"))
+    if channels.get("external"):
+        entries.append(slack_key(channels["external"], "External"))
+    if c.folder:
+        entries += [entry_key(profile, d) for d in subdirs(c.folder)]
+    place(profile, page, entries, f"customer:{c.key}")
     return page
 
 
-def customers_page(profile: Profile, path: Path) -> Page:
-    v = CONFIG["vault"]
-    page = profile.page(f"customers:{path}", "Customers")
+def customers(path: Path) -> list[Customer]:
+    """Union of customer folders and the vault's Active client notes."""
     clients = vault_clients()
-    entries: list[tuple[str, Key]] = []
+    out: list[Customer] = []
     seen: set[str] = set()
     for c in subdirs(path):
         note = match_client(c.name, clients)
         if note:
             seen.add(slug(note))
-        entries.append((c.name, folder_key(customer_page(profile, c, note), tile(wrap(c.name), C_CUSTOMER, footer="notes + repos" if note else "repos"))))
+        out.append(Customer(note or c.name, c, note))
     for cs, name in clients.items():
-        if cs in seen:
-            continue
-        note = f"{v['clients_dir']}/{name}/{v['client_note']}"
-        entries.append((name, obsidian_key(v["name"], note, wrap(name))))
-    entries.sort(key=lambda e: e[0].lower())
-    place(profile, page, [k for _, k in entries], f"customers:{path}")
+        if cs not in seen:
+            out.append(Customer(name, None, name))
+    return sorted(out, key=lambda c: c.label.lower())
+
+
+def customers_page(profile: Profile, path: Path) -> Page:
+    page = profile.page(f"customers:{path}", "Customers")
+    entries = [
+        folder_key(customer_page(profile, c), tile(wrap(c.label), C_CUSTOMER, footer=c.footer))
+        for c in customers(path)
+    ]
+    place(profile, page, entries, f"customers:{path}")
     return page
 
 
@@ -413,15 +461,99 @@ def gridfinity_page(profile: Profile) -> Page:
     return page
 
 
+# ---- meeting: Zoom plugin + Insta360 Link Controller global shortcuts --------
+
+ZOOM_PLUGIN = {"Name": "Zoom", "UUID": "com.elgato.zoom", "Version": "1.0"}
+STICKY_PREFIXES = ("com.elgato.zoom.",)  # settings edited in the app's UI survive a rescan
+STICKY: dict[tuple[str, str, str], dict] = {}
+
+# macOS virtual key codes / Qt key codes the hotkey action stores.
+VK = {"0": 29, "1": 18, "2": 19, "3": 20, "=": 24, "-": 27, "left": 123, "right": 124, "down": 125, "up": 126}
+QT = {"0": 48, "1": 49, "2": 50, "3": 51, "=": 61, "-": 45, "left": 16777234, "up": 16777235, "right": 16777236, "down": 16777237}
+MOD = {"shift": 1, "ctrl": 2, "option": 4, "cmd": 8}
+NO_KEY = {"KeyCmd": False, "KeyCtrl": False, "KeyModifiers": 0, "KeyOption": False, "KeyShift": False, "NativeCode": -1, "QTKeyCode": 33554431, "VKeyCode": -1}
+
+
+def chord(key: str, *mods: str) -> dict:
+    return {
+        "KeyCmd": "cmd" in mods,
+        "KeyCtrl": "ctrl" in mods,
+        "KeyModifiers": sum(MOD[m] for m in mods),
+        "KeyOption": "option" in mods,
+        "KeyShift": "shift" in mods,
+        "NativeCode": VK[key],
+        "QTKeyCode": QT[key],
+        "VKeyCode": VK[key],
+    }
+
+
+def camera_chord(key: str) -> dict:
+    """The shortcuts assigned in Link Controller: ctrl+option+cmd+<key>."""
+    return chord(key, *CONFIG["camera"]["modifiers"])
+
+
+def hotkey_key(hk: dict, label: list[str], icon: str | None = None) -> Key:
+    settings = {"Coalesce": True, "Hotkeys": [hk, dict(NO_KEY), dict(NO_KEY), dict(NO_KEY)]}
+    return Key("com.elgato.streamdeck.system.hotkey", settings, tile(label, C_BASE, app_icon(icon) if icon else None), None, "Hotkey")
+
+
+def hotkey_dial(ccw: dict, cw: dict, press: dict | None = None) -> Dial:
+    """Hotkey action on a dial: [rotate left, rotate right, press, touch]."""
+    return Dial("com.elgato.streamdeck.system.hotkey", None, {"Coalesce": True, "Hotkeys": [ccw, cw, press or dict(NO_KEY), dict(NO_KEY)]})
+
+
+def zoom_key(action: str, states: int) -> Key:
+    return Key(f"com.elgato.zoom.{action}", {}, None, ZOOM_PLUGIN, action, states)
+
+
+def meeting_keys(profile: Profile, page: Page, key: str) -> None:
+    cam = CONFIG["camera"]["keys"]
+    icon = CONFIG["camera"]["app"]
+    page.keys[(1, 0)] = zoom_key("mute", 2)
+    page.keys[(2, 0)] = zoom_key("video", 2)
+    page.keys[(3, 0)] = zoom_key("screenshare", 2)
+    page.keys[(0, 1)] = hotkey_key(camera_chord(cam["face"]), ["Face"], icon)
+    page.keys[(1, 1)] = hotkey_key(camera_chord(cam["whiteboard"]), ["White-", "board"], icon)
+    page.keys[(2, 1)] = hotkey_key(camera_chord(cam["desk"]), ["Desk"], icon)
+    page.keys[(3, 1)] = zoom_key("leavemeeting", 1)
+    page.dials[0] = Dial("com.elgato.streamdeck.system.multimedia", None, {"actionIdx": 18})  # system volume
+    page.dials[1] = hotkey_dial(camera_chord(cam["zoom_out"]), camera_chord(cam["zoom_in"]), camera_chord(cam["center"]))
+    page.dials[2] = hotkey_dial(camera_chord("left"), camera_chord("right"))
+    page.dials[3] = hotkey_dial(camera_chord("down"), camera_chord("up"))
+
+
 def meeting_page(profile: Profile) -> Page:
+    """Folder version, opened from Home: (0,0) is Back, so the seven keys above are all of it."""
     page = profile.page("meeting", "Meeting")
     page.keys[(0, 0)] = back()
+    meeting_keys(profile, page, "meeting")
     return page
+
+
+def zoom_app_profile() -> tuple[Profile, Page]:
+    """Separate profile the app switches to while Zoom is frontmost. No Back
+    needed, so (0,0) opens a More page with the rarer Zoom actions."""
+    profile = Profile()
+    page = profile.page("meeting-app", "Meeting")
+    meeting_keys(profile, page, "meeting-app")
+    more = profile.page("meeting-app/more", "Meeting (more)")
+    more.keys[(0, 0)] = back()
+    more.keys[(1, 0)] = zoom_key("raisehand", 2)
+    more.keys[(2, 0)] = zoom_key("react", 1)
+    more.keys[(3, 0)] = zoom_key("record", 3)
+    more.keys[(1, 1)] = zoom_key("sharemode", 1)
+    more.keys[(3, 1)] = zoom_key("muteall", 1)
+    page.keys[(0, 0)] = folder_key(more, tile(["More ▸"], C_FOLDER))
+    return profile, page
 
 
 def home_page(profile: Profile) -> Page:
     home = profile.page("home", "Home")
-    home.keys[(0, 0)] = folder_key(astronomer_page(profile), tile(["Astro-", "nomer"], C_HOME))
+    try:
+        astro_tile = logo_tile("astronomer-mark", C_HOME)
+    except FileNotFoundError:
+        astro_tile = tile(["Astro-", "nomer"], C_HOME)
+    home.keys[(0, 0)] = folder_key(astronomer_page(profile), astro_tile)
     home.keys[(1, 0)] = folder_key(meeting_page(profile), tile(["Meeting"], C_HOME, app_icon("zoom.us")))
     home.keys[(2, 0)] = folder_key(gridfinity_page(profile), tile(["Gridfinity"], C_ACCENT))
     home.keys[(3, 0)] = launch_key(
@@ -446,12 +578,16 @@ def device() -> tuple[str, str]:
 
 
 def key_json(page: Page, pos: tuple[int, int], k: Key, images_dir: Path) -> dict:
+    pos_str = f"{pos[0]},{pos[1]}"
+    settings = k.settings
+    if k.action.startswith(STICKY_PREFIXES) and (page.id, pos_str, k.action) in STICKY:
+        settings = STICKY[(page.id, pos_str, k.action)]
     entry: dict = {
         "ActionID": page_uuid(f"{page.id}:{pos}:{k.action}"),
         "LinkedTitle": True,
         "Name": k.name or k.action.rsplit(".", 1)[-1],
         "Resources": None,
-        "Settings": k.settings,
+        "Settings": settings,
         "State": 0,
         "UUID": k.action,
     }
@@ -485,23 +621,49 @@ def dial_json(page: Page, col: int, d: Dial) -> dict:
     return entry
 
 
-def emit(profile: Profile, home: Page, out: Path, dev_uuid: str, model: str) -> None:
+@dataclass
+class Target:
+    """One .sdProfile to write: the main profile, or the Zoom-triggered one."""
+
+    key: str  # page_uuid(key) is the profile UUID
+    name: str
+    profile: Profile
+    home: Page
+    app_identifier: str | None = None
+
+    @property
+    def uuid(self) -> str:
+        return page_uuid(self.key)
+
+    @property
+    def installed(self) -> Path:
+        return PROFILES_DIR / f"{self.uuid.upper()}.sdProfile"
+
+    @property
+    def built(self) -> Path:
+        return BUILD / f"{self.uuid.upper()}.sdProfile"
+
+
+def emit(t: Target, dev_uuid: str, model: str) -> None:
+    out = t.built
     out.mkdir(parents=True)
     (out / "Images").mkdir()
     # "Default" is the app's blank template page, distinct from the real pages
     # (it warns "duplicate" if it is one of them), so emit an empty one.
-    blank = page_uuid("blank")
-    manifest = {
+    blank = page_uuid(t.key + ":blank")
+    manifest: dict = {
         "Device": {"Model": model, "UUID": dev_uuid},
-        "Name": CONFIG["profile_name"],
-        "Pages": {"Current": home.id, "Default": blank, "Pages": [home.id]},
+        "Name": t.name,
+        "Pages": {"Current": t.home.id, "Default": blank, "Pages": [t.home.id]},
         "Version": "3.0",
     }
+    if t.app_identifier:
+        manifest["AppIdentifier"] = t.app_identifier
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
     bdir = out / "Profiles" / blank.upper()
     (bdir / "Images").mkdir(parents=True)
     (bdir / "manifest.json").write_text(json.dumps({"Controllers": [], "Icon": "", "Name": ""}))
-    for page in profile.pages.values():
+    for page in t.profile.pages.values():
         pdir = out / "Profiles" / page.id.upper()
         (pdir / "Images").mkdir(parents=True)
         keypad = {f"{c},{r}": key_json(page, (c, r), k, pdir / "Images") for (c, r), k in sorted(page.keys.items())}
@@ -517,63 +679,84 @@ def emit(profile: Profile, home: Page, out: Path, dev_uuid: str, model: str) -> 
         (pdir / "manifest.json").write_text(json.dumps(doc, indent=1))
 
 
-def build(out: Path) -> tuple[Profile, Page, str]:
-    profile = Profile()
-    home = home_page(profile)
+def load_sticky(targets: list[Target]) -> None:
+    """Remember settings the user edited in the app's UI for sticky actions
+    (Zoom's share-screen monitor choice, for one) so a rescan keeps them."""
+    for t in targets:
+        for m in (t.installed / "Profiles").glob("*/manifest.json"):
+            page_id = m.parent.name.lower()
+            try:
+                doc = json.loads(m.read_text())
+            except (OSError, ValueError):
+                continue
+            for ctl in doc.get("Controllers") or []:
+                for pos, a in (ctl.get("Actions") or {}).items():
+                    if str(a.get("UUID", "")).startswith(STICKY_PREFIXES) and a.get("Settings"):
+                        STICKY[(page_id, pos, a["UUID"])] = a["Settings"]
+
+
+def build() -> tuple[list[Target], str]:
+    main = Profile()
+    home = home_page(main)
+    zoom, zoom_home = zoom_app_profile()
+    targets = [
+        Target("profile", CONFIG["profile_name"], main, home),
+        Target("profile-zoom", f"{CONFIG['profile_name']} (Zoom)", zoom, zoom_home, CONFIG["zoom_bundle_id"]),
+    ]
+    load_sticky(targets)
     dev_uuid, model = device()
-    if out.exists():
-        shutil.rmtree(out)
-    emit(profile, home, out, dev_uuid, model)
-    return profile, home, dev_uuid
+    if BUILD.exists():
+        shutil.rmtree(BUILD)
+    for t in targets:
+        emit(t, dev_uuid, model)
+    return targets, dev_uuid
 
 
-def install(built: Path, dev_uuid: str, set_default: bool) -> Path:
-    target = PROFILES_DIR / f"{page_uuid('profile').upper()}.sdProfile"
-    if target.exists():
-        BACKUPS.mkdir(parents=True, exist_ok=True)
-        dest = BACKUPS / time.strftime("%Y%m%d%H%M%S") / target.name
-        dest.parent.mkdir(parents=True)
-        shutil.move(str(target), str(dest))
-        print(f"moved previous profile to {dest}")
-    shutil.copytree(built, target)
-    print(f"installed {target}")
+def install(targets: list[Target], dev_uuid: str, set_default: bool) -> None:
+    stamp = time.strftime("%Y%m%d%H%M%S")
+    for t in targets:
+        if t.installed.exists():
+            dest = BACKUPS / stamp / t.installed.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(t.installed), str(dest))
+            print(f"moved previous profile to {dest}")
+        shutil.copytree(t.built, t.installed)
+        print(f"installed {t.installed.name} ({t.name})")
     if set_default:
         raw = subprocess.run(["defaults", "export", "com.elgato.StreamDeck", "-"], check=True, capture_output=True).stdout
         prefs = plistlib.loads(raw)
         info = prefs["Devices"].setdefault(dev_uuid, {})
-        info.setdefault("ESDProfilesInfo", {})["ESDProfilesPreferred"] = page_uuid("profile")
+        info.setdefault("ESDProfilesInfo", {})["ESDProfilesPreferred"] = targets[0].uuid
         subprocess.run(["defaults", "import", "com.elgato.StreamDeck", "-"], check=True, input=plistlib.dumps(prefs))
         print("set as the device's default profile")
-    return target
 
 
-def restart_app() -> None:
+def quit_app() -> None:
     subprocess.run(["osascript", "-e", 'tell application "Elgato Stream Deck" to quit'], check=False, capture_output=True)
     for _ in range(50):
         if subprocess.run(["pgrep", "-x", "Stream Deck"], capture_output=True).returncode != 0:
-            break
+            return
         time.sleep(0.2)
-    subprocess.run(["open", "-a", "Elgato Stream Deck"], check=True)
-    print("restarted the Stream Deck app")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--install", action="store_true", help="copy the built profile into the Stream Deck app")
+    ap.add_argument("--install", action="store_true", help="copy the built profiles into the Stream Deck app")
     ap.add_argument("--restart", action="store_true", help="quit and relaunch the app around the install")
-    ap.add_argument("--set-default", action="store_true", help="make it the device's default profile")
+    ap.add_argument("--set-default", action="store_true", help="make the main profile the device's default")
     args = ap.parse_args()
 
-    profile, home, dev_uuid = build(BUILD)
-    print(f"built {len(profile.pages)} pages into {BUILD}")
+    targets, dev_uuid = build()
+    pages = sum(len(t.profile.pages) for t in targets)
+    print(f"built {len(targets)} profiles, {pages} pages, into {BUILD}")
     if not args.install:
         return
     if args.restart:
-        subprocess.run(["osascript", "-e", 'tell application "Elgato Stream Deck" to quit'], check=False, capture_output=True)
-        time.sleep(1.5)
-    install(BUILD, dev_uuid, args.set_default)
+        quit_app()
+    install(targets, dev_uuid, args.set_default)
     if args.restart:
-        restart_app()
+        subprocess.run(["open", "-a", "Elgato Stream Deck"], check=True)
+        print("restarted the Stream Deck app")
 
 
 if __name__ == "__main__":
