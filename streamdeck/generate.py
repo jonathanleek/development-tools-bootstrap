@@ -106,7 +106,10 @@ def font(size: int):
 
 def wrap(text: str, max_lines: int = 3) -> list[str]:
     """Break a folder/repo name into short lines on -, _, space, camelCase."""
-    words = re.split(r"[-_ ]+", re.sub(r"([a-z])([A-Z])", r"\1 \2", text))
+    # split camelCase only for long names; "McDonald's" fits a tile as it is
+    if len(text) > 12:
+        text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    words = re.split(r"[-_ ]+", text)
     lines: list[str] = []
     for w in words:
         if lines and len(lines[-1]) + 1 + len(w) <= 10:
