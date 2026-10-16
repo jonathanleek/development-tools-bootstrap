@@ -17,6 +17,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure, installs `mi6`, and gives every folder a `.mi6/` layer |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
+| `scripts/streamdeck.sh` + `streamdeck/` | Stream Deck +: links the plugins, generates the profile from disk (see below) |
 | `dotfiles/` + `scripts/dotfiles.sh` | Shell dotfiles, symlinked into `$HOME` (see below) |
 | `claude-config/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
@@ -50,6 +51,7 @@ if you ran it from a download); anything already in the way is moved to
 12. Generates an SSH key and adds it to GitHub (reuses a restored key if present).
 13. Clones the Obsidian/data vaults and registers them with Obsidian.
 14. Reproduces the Claude Code environment.
+15. Sets up the Stream Deck + (plugins, generated profile, Link Controller login item).
 
 ### Secret restore (step 11)
 
@@ -100,3 +102,44 @@ Agent configuration per folder comes from
 the stub set of files `mi6` reads; the instructions, permissions, and env
 in each layer are filled by hand. Set `GIT_ROOT` to build the tree
 somewhere else.
+
+## Stream Deck +
+
+The deck's profile is **generated from what's on disk**, not hand-built.
+`streamdeck/generate.py` (run with `uv`) writes it straight into the Stream
+Deck app's profile folder; `scripts/streamdeck.sh` links the plugins and runs
+it. Re-run either after adding a customer folder, a repo, or a client note,
+or press **Rescan** on the deck (it restarts the app, ~5 s).
+
+- **Home**: Astronomer, Meeting, Gridfinity, Rescan. No dials.
+- **Astronomer** walks `~/Documents/git/astronomer` one page per folder down
+  to each git repo: Ghostty here, PyCharm, Finder. **Customers** is the union
+  of `customers/` folders and the Astronomer vault's `! Clients/Active` notes;
+  each customer page has Notes (Obsidian), Finder, Slack Internal / External,
+  and its repos. Slack channels come from the client's `Client Info` note —
+  rows `Slack (internal)` / `Slack (external)` holding `#channel-name` (looked
+  up in `streamdeck/slack-channels.json`; add a line for a new name) or a
+  channel link.
+- **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave; more on
+  a second page) plus Face / Whiteboard / Desk and zoom / pan / tilt dials,
+  which send Insta360 Link Controller's global shortcuts. Emitted twice: as a
+  folder off Home and as a profile tied to Zoom's bundle id, so the deck
+  switches to it while Zoom is frontmost. Zoom key settings edited in the
+  app (which monitor to share) are preserved across rescans.
+- **Gridfinity**: dials set X / Y / height, keys toggle label shelf and
+  scoop and generate a bin or baseplate (STL + STEP) onto the Workshop share.
+  The plugin lives in `westbound-workshop/inventory-kiosk/streamdeck-plugin`
+  and reuses the kiosk's CAD engine; `scripts/streamdeck.sh` creates its
+  virtualenv (`uv sync --extra cad --extra deck`) and links it in.
+
+`streamdeck/plugins/com.jonathanleek.launch.sdPlugin` is a tiny plugin that
+runs the `argv` stored in a key (the built-in Open action can't pass a
+working directory to Ghostty or PyCharm). Settings live in
+`streamdeck/config.json`; the Astronomer logo and other icons in
+`streamdeck/icons/`. Previous profiles are moved to
+`~/.local/state/streamdeck-generator/backups/`, never deleted.
+
+**Manual, once per Mac** (can't be scripted):
+1. Stream Deck app → Marketplace → install **Zoom** by Elgato (needs an Elgato login).
+2. In the Stream Deck app, click the Share Screen key on the Meeting page and on the "(Zoom)" profile and pick the monitor to share.
+3. Insta360 Link Controller → Settings → Shortcut key: turn on Global Shortcuts, save your framing as Preset 1, and assign (all with ctrl+option+cmd): Preset 1 `1`, Whiteboard `2`, DeskView `3`, Center gimbal `0`, Enlarge `=`, Zoom out `-`, gimbal nudges the arrow keys. These match `camera` in `streamdeck/config.json`.
