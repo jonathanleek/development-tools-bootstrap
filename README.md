@@ -135,7 +135,9 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
 
 `streamdeck/plugins/com.jonathanleek.launch.sdPlugin` is a tiny plugin that
 runs the `argv` stored in a key (the built-in Open action can't pass a
-working directory to Ghostty or PyCharm). Settings live in
+working directory to Ghostty or PyCharm); its commands' output goes to
+`~/Library/Logs/com.jonathanleek.launch.commands.log`, which is where to look
+if Rescan misbehaves. Settings live in
 `streamdeck/config.json`; the Astronomer logo and other icons in
 `streamdeck/icons/`. Previous profiles are moved to
 `~/.local/state/streamdeck-generator/backups/`, never deleted.

@@ -28,6 +28,7 @@ from sdws import WebSocket  # noqa: E402
 
 log = logging.getLogger("launch")
 PLUGIN = "com.jonathanleek.launch"
+COMMAND_LOG = Path.home() / "Library/Logs" / f"{PLUGIN}.commands.log"
 
 
 def start(settings: dict) -> None:
@@ -38,7 +39,15 @@ def start(settings: dict) -> None:
     env = dict(os.environ)
     env.update({k: str(v) for k, v in (settings.get("env") or {}).items()})
     log.info("run %s", argv)
-    subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True)
+    # The command's output must not go to our own stdout: that is a pipe to the
+    # Stream Deck app, and a command that outlives the app (Rescan restarts it)
+    # would die of a broken pipe on its next print. Log it instead.
+    out = open(COMMAND_LOG, "ab")
+    subprocess.Popen(
+        argv, cwd=cwd, env=env, start_new_session=True,
+        stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
+    )
+    out.close()
 
 
 def serve(ws: WebSocket) -> None:
