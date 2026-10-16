@@ -21,8 +21,8 @@
   },
   "kiosk_repo": "~/Documents/git/westbound-workshop/inventory-kiosk",
   "slack": {
-    "_comment": "Workspace ID for slack:// deep links. Channel IDs come from each client's Client Info note (Slack (internal) / Slack (external) rows).",
-    "team": "T0A5WHQCE0P"
+    "_comment": "Enterprise Grid org ID (E\u2026) for slack:// deep links; the workspace ID (T\u2026) only resolved older channels. Channel IDs come from each client's Client Info note (Slack (internal) / Slack (external) rows, #name or link).",
+    "team": "E0A5WHQCE0P"
   },
   "camera": {
     "_comment": "Insta360 Link Controller global shortcuts (Settings > Shortcut key, Global Shortcuts on). Every key below is pressed with these modifiers; left/right/up/down are the gimbal nudges.",
