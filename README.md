@@ -140,6 +140,7 @@ working directory to Ghostty or PyCharm). Settings live in
 `~/.local/state/streamdeck-generator/backups/`, never deleted.
 
 **Manual, once per Mac** (can't be scripted):
-1. Stream Deck app → Marketplace → install **Zoom** by Elgato (needs an Elgato login).
-2. In the Stream Deck app, click the Share Screen key on the Meeting page and on the "(Zoom)" profile and pick the monitor to share.
-3. Insta360 Link Controller → Settings → Shortcut key: turn on Global Shortcuts, save your framing as Preset 1, and assign (all with ctrl+option+cmd): Preset 1 `1`, Whiteboard `2`, DeskView `3`, Center gimbal `0`, Enlarge `=`, Zoom out `-`, gimbal nudges the arrow keys. These match `camera` in `streamdeck/config.json`.
+1. System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27): add `Elgato Stream Deck` with **+** and switch it on. Without it every hotkey key shows a yellow caution and sends nothing; the app never asks for it.
+2. Stream Deck app → Marketplace → install **Zoom** by Elgato (needs an Elgato login).
+3. In the Stream Deck app, click the Share Screen key on the Meeting page and on the "(Zoom)" profile and pick the monitor to share.
+4. Insta360 Link Controller → Settings → Shortcut key: turn on Global Shortcuts, save your framing as Preset 1, and assign (all with ctrl+option+cmd): Preset 1 `1`, Whiteboard `2`, DeskView `3`, Center gimbal `0`, Enlarge `=`, Zoom out `-`, gimbal nudges the arrow keys. These match `camera` in `streamdeck/config.json`.
