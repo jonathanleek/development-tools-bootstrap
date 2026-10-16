@@ -511,8 +511,10 @@ STICKY_PREFIXES = ("com.elgato.zoom.",)  # settings edited in the app's UI survi
 STICKY: dict[tuple[str, str, str], dict] = {}
 
 # macOS virtual key codes / Qt key codes the hotkey action stores.
-VK = {"0": 29, "1": 18, "2": 19, "3": 20, "=": 24, "-": 27, "left": 123, "right": 124, "down": 125, "up": 126}
-QT = {"0": 48, "1": 49, "2": 50, "3": 51, "=": 61, "-": 45, "left": 16777234, "up": 16777235, "right": 16777236, "down": 16777237}
+# Arrow keys are deliberately absent: ctrl+arrows are Mission Control shortcuts on
+# macOS and the extra modifiers do not stop them firing. Letters are safe.
+VK = {"0": 29, "1": 18, "2": 19, "3": 20, "=": 24, "-": 27, "i": 34, "j": 38, "k": 40, "l": 37}
+QT = {"0": 48, "1": 49, "2": 50, "3": 51, "=": 61, "-": 45, "i": 73, "j": 74, "k": 75, "l": 76}
 MOD = {"shift": 1, "ctrl": 2, "option": 4, "cmd": 8}
 NO_KEY = {"KeyCmd": False, "KeyCtrl": False, "KeyModifiers": 0, "KeyOption": False, "KeyShift": False, "NativeCode": -1, "QTKeyCode": 33554431, "VKeyCode": -1}
 
@@ -555,14 +557,14 @@ def meeting_keys(profile: Profile, page: Page, key: str) -> None:
     page.keys[(1, 0)] = zoom_key("mute", 2)
     page.keys[(2, 0)] = zoom_key("video", 2)
     page.keys[(3, 0)] = zoom_key("screenshare", 2)
-    page.keys[(0, 1)] = hotkey_key(camera_chord(cam["face"]), ["Face"], icon)
+    page.keys[(0, 1)] = hotkey_key(camera_chord(cam["face"]), ["Meeting"], icon)
     page.keys[(1, 1)] = hotkey_key(camera_chord(cam["whiteboard"]), ["White-", "board"], icon)
     page.keys[(2, 1)] = hotkey_key(camera_chord(cam["desk"]), ["Desk"], icon)
     page.keys[(3, 1)] = zoom_key("leavemeeting", 1)
     page.dials[0] = Dial("com.elgato.streamdeck.system.multimedia", None, {"actionIdx": 18})  # system volume
     page.dials[1] = hotkey_dial(camera_chord(cam["zoom_out"]), camera_chord(cam["zoom_in"]), camera_chord(cam["center"]))
-    page.dials[2] = hotkey_dial(camera_chord("left"), camera_chord("right"))
-    page.dials[3] = hotkey_dial(camera_chord("down"), camera_chord("up"))
+    page.dials[2] = hotkey_dial(camera_chord(cam["left"]), camera_chord(cam["right"]))
+    page.dials[3] = hotkey_dial(camera_chord(cam["down"]), camera_chord(cam["up"]))
 
 
 def meeting_page(profile: Profile) -> Page:

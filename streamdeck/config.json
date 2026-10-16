@@ -25,7 +25,7 @@
     "team": "E0A5WHQCE0P"
   },
   "camera": {
-    "_comment": "Insta360 Link Controller global shortcuts (Settings > Shortcut key, Global Shortcuts on). Every key below is pressed with these modifiers; left/right/up/down are the gimbal nudges.",
+    "_comment": "Insta360 Link Controller global shortcuts (Settings > Hotkeys, Global Shortcuts ticked per row). Every key below is pressed with these modifiers. Gimbal nudges use i/k/j/l, not arrows: ctrl+arrow combos trigger Mission Control even with cmd and option held.",
     "app": "Insta360 Link Controller",
     "modifiers": [
       "ctrl",
@@ -33,13 +33,18 @@
       "cmd"
     ],
     "keys": {
-      "face": "1",
-      "whiteboard": "2",
+      "face": "2",
+      "whiteboard": "1",
       "desk": "3",
       "center": "0",
       "zoom_in": "=",
-      "zoom_out": "-"
-    }
+      "zoom_out": "-",
+      "up": "i",
+      "down": "k",
+      "left": "j",
+      "right": "l"
+    },
+    "presets_comment": "Link Controller scene presets in order: 1 = Whiteboard, 2 = Meeting. Deck keys: Meeting -> Preset 2, Whiteboard -> Preset 1, Desk -> DeskView mode."
   },
   "zoom_bundle_id": "us.zoom.xos"
 }
