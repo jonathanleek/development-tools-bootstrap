@@ -509,6 +509,7 @@ def gridfinity_page(profile: Profile) -> Page:
 ZOOM_PLUGIN = {"Name": "Zoom", "UUID": "com.elgato.zoom", "Version": "1.0"}
 STICKY_PREFIXES = ("com.elgato.zoom.",)  # settings edited in the app's UI survive a rescan
 STICKY: dict[tuple[str, str, str], dict] = {}
+STICKY_BY_ACTION: dict[str, dict] = {}
 
 # macOS virtual key codes / Qt key codes the hotkey action stores.
 # Arrow keys are deliberately absent: ctrl+arrows are Mission Control shortcuts on
@@ -548,7 +549,10 @@ def hotkey_dial(ccw: dict, cw: dict, press: dict | None = None) -> Dial:
 
 
 def zoom_key(action: str, states: int) -> Key:
-    return Key(f"com.elgato.zoom.{action}", {}, None, ZOOM_PLUGIN, action, states)
+    settings: dict = {}
+    if action == "screenshare":
+        settings = {"monitor": json.dumps(CONFIG["zoom"]["share_monitor"]), "optimizeVideo": False, "shareSound": False}
+    return Key(f"com.elgato.zoom.{action}", settings, None, ZOOM_PLUGIN, action, states)
 
 
 def meeting_keys(profile: Profile, page: Page, key: str) -> None:
@@ -625,8 +629,10 @@ def device() -> tuple[str, str]:
 def key_json(page: Page, pos: tuple[int, int], k: Key, images_dir: Path) -> dict:
     pos_str = f"{pos[0]},{pos[1]}"
     settings = k.settings
-    if k.action.startswith(STICKY_PREFIXES) and (page.id, pos_str, k.action) in STICKY:
-        settings = STICKY[(page.id, pos_str, k.action)]
+    if k.action.startswith(STICKY_PREFIXES):
+        # exact key first, else the same action configured anywhere (the Share
+        # key on the folder page and on the Zoom profile should agree)
+        settings = STICKY.get((page.id, pos_str, k.action)) or STICKY_BY_ACTION.get(k.action) or settings
     entry: dict = {
         "ActionID": page_uuid(f"{page.id}:{pos}:{k.action}"),
         "LinkedTitle": True,
@@ -738,6 +744,7 @@ def load_sticky(targets: list[Target]) -> None:
                 for pos, a in (ctl.get("Actions") or {}).items():
                     if str(a.get("UUID", "")).startswith(STICKY_PREFIXES) and a.get("Settings"):
                         STICKY[(page_id, pos, a["UUID"])] = a["Settings"]
+                        STICKY_BY_ACTION.setdefault(a["UUID"], a["Settings"])
 
 
 def build() -> tuple[list[Target], str]:

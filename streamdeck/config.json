@@ -46,5 +46,12 @@
     },
     "presets_comment": "Link Controller preset numbering (verified on the device): Preset 1 = Meeting framing, Preset 2 = Whiteboard framing, regardless of the order the thumbnails show. Deck keys: Meeting -> Preset 1, Whiteboard -> Preset 2, Desk -> DeskView mode."
   },
-  "zoom_bundle_id": "us.zoom.xos"
+  "zoom_bundle_id": "us.zoom.xos",
+  "zoom": {
+    "_comment": "Share Screen target as the Zoom plugin stores it (pick it once in the app's inspector to see the current value). A choice made in the app on any Share key wins over this on rescan.",
+    "share_monitor": {
+      "DeviceID": 3,
+      "FriendlyName": "BenQ RD280U"
+    }
+  }
 }
