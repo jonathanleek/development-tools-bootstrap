@@ -1,0 +1,23 @@
+{
+  "profile_name": "Jonathan",
+  "device_name": "Stream Deck +",
+  "device_model": "20GBD9901",
+  "git_root": "~/Documents/git/astronomer",
+  "customers_dir": "customers",
+  "vault": {
+    "path": "~/Documents/git/astronomer/astronomer-vault",
+    "name": "astronomer-vault",
+    "clients_dir": "! Clients/Active",
+    "client_note": "Client Info"
+  },
+  "customer_notes": {
+    "_comment": "customer folder name -> client note folder in the vault, for the ones slug-prefix matching gets wrong"
+  },
+  "apps": {
+    "terminal": "Ghostty",
+    "ide": "PyCharm",
+    "finder": "Finder",
+    "obsidian": "Obsidian"
+  },
+  "kiosk_repo": "~/Documents/git/westbound-workshop/inventory-kiosk"
+}
