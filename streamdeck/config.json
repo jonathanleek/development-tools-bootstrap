@@ -33,8 +33,8 @@
       "cmd"
     ],
     "keys": {
-      "face": "2",
-      "whiteboard": "1",
+      "face": "1",
+      "whiteboard": "2",
       "desk": "3",
       "center": "0",
       "zoom_in": "=",
@@ -44,7 +44,7 @@
       "left": "j",
       "right": "l"
     },
-    "presets_comment": "Link Controller scene presets in order: 1 = Whiteboard, 2 = Meeting. Deck keys: Meeting -> Preset 2, Whiteboard -> Preset 1, Desk -> DeskView mode."
+    "presets_comment": "Link Controller preset numbering (verified on the device): Preset 1 = Meeting framing, Preset 2 = Whiteboard framing, regardless of the order the thumbnails show. Deck keys: Meeting -> Preset 1, Whiteboard -> Preset 2, Desk -> DeskView mode."
   },
   "zoom_bundle_id": "us.zoom.xos"
 }
