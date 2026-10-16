@@ -805,16 +805,35 @@ def install(targets: list[Target], dev_uuid: str, set_default: bool) -> None:
         print("set as the device's default profile")
 
 
+def app_running() -> bool:
+    return subprocess.run(["pgrep", "-x", "Stream Deck"], capture_output=True).returncode == 0
+
+
 def quit_app() -> None:
     subprocess.run(["osascript", "-e", 'tell application "Elgato Stream Deck" to quit'], check=False, capture_output=True)
     for _ in range(50):
-        if subprocess.run(["pgrep", "-x", "Stream Deck"], capture_output=True).returncode != 0:
+        if not app_running():
             break
         time.sleep(0.2)
     else:
         subprocess.run(["pkill", "-x", "Stream Deck"], check=False)  # stuck on a modal dialog
         time.sleep(1)
+    # Launched from the deck, the quit is still finishing when the process
+    # disappears from pgrep; an `open` that arrives then is handed to the dying
+    # instance and nothing starts. Give it a moment.
+    time.sleep(2)
     reset_session_report()
+
+
+def relaunch_app() -> None:
+    for attempt in range(5):
+        subprocess.run(["open", "-a", "Elgato Stream Deck"], check=False)
+        for _ in range(25):
+            time.sleep(0.2)
+            if app_running():
+                print("restarted the Stream Deck app" + (f" (attempt {attempt + 1})" if attempt else ""))
+                return
+    print("could not relaunch the Stream Deck app; open it by hand", file=sys.stderr)
 
 
 def reset_session_report() -> None:
@@ -846,8 +865,7 @@ def main() -> None:
         quit_app()
     install(targets, dev_uuid, args.set_default)
     if args.restart:
-        subprocess.run(["open", "-a", "Elgato Stream Deck"], check=True)
-        print("restarted the Stream Deck app")
+        relaunch_app()
 
 
 if __name__ == "__main__":
