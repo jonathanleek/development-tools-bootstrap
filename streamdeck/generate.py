@@ -632,14 +632,36 @@ def home_page(profile: Profile) -> Page:
 # ---- emit --------------------------------------------------------------------
 
 
+APP_LOG = Path.home() / "Library/Logs/ElgatoStreamDeck/StreamDeck.log"
+
+
 def device() -> tuple[str, str]:
-    """(device UUID, model) for the configured device, from the app's prefs."""
+    """(device UUID, model) for the deck to target, from the app's prefs.
+
+    Profiles are bound to a device's serial, so a replacement deck is a new
+    device. Candidates are the devices whose name starts with the configured
+    one (the app names a second unit "Stream Deck + 2"); among them, the one
+    the app most recently reported attached wins, else the app's preferred
+    device, else the first."""
     raw = subprocess.run(["defaults", "export", "com.elgato.StreamDeck", "-"], check=True, capture_output=True).stdout
     prefs = plistlib.loads(raw)
-    for dev_uuid, info in prefs.get("Devices", {}).items():
-        if isinstance(info, dict) and info.get("DeviceName") == CONFIG["device_name"]:
-            return dev_uuid, CONFIG["device_model"]
-    raise SystemExit(f"no device named {CONFIG['device_name']!r} in the Stream Deck app's preferences")
+    devices = prefs.get("Devices", {})
+    candidates = [
+        u for u, info in devices.items()
+        if isinstance(info, dict) and str(info.get("DeviceName", "")).startswith(CONFIG["device_name"])
+    ]
+    if not candidates:
+        raise SystemExit(f"no device named {CONFIG['device_name']!r} in the Stream Deck app's preferences")
+    if len(candidates) > 1 and APP_LOG.exists():
+        attached = re.findall(r"device attached (@\(\d+\)\[[^\]]+\])", APP_LOG.read_text(errors="replace"))
+        for u in reversed(attached):
+            if u in candidates:
+                return u, CONFIG["device_model"]
+    preferred = str(devices.get("PreferredDevice", "")).lstrip("@")
+    for u in candidates:
+        if u.lstrip("@") == preferred:
+            return u, CONFIG["device_model"]
+    return candidates[0], CONFIG["device_model"]
 
 
 def key_json(page: Page, pos: tuple[int, int], k: Key, images_dir: Path) -> dict:
@@ -801,6 +823,7 @@ def install(targets: list[Target], dev_uuid: str, set_default: bool) -> None:
         prefs = plistlib.loads(raw)
         info = prefs["Devices"].setdefault(dev_uuid, {})
         info.setdefault("ESDProfilesInfo", {})["ESDProfilesPreferred"] = targets[0].uuid
+        prefs["Devices"]["PreferredDevice"] = "@" + dev_uuid
         subprocess.run(["defaults", "import", "com.elgato.StreamDeck", "-"], check=True, input=plistlib.dumps(prefs))
         print("set as the device's default profile")
 
