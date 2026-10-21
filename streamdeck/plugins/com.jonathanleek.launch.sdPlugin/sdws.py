@@ -2,6 +2,7 @@
 
 Standard library only, so plugins can run on the system Python. Text frames
 in and out, pings answered, no fragmentation (the Stream Deck app sends none).
+Sending is safe from several threads; receiving belongs to one.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import itertools
 import os
 import socket
 import struct
+import threading
 
 
 def _mask(data: bytes, mask: bytes) -> bytes:
@@ -19,6 +21,7 @@ def _mask(data: bytes, mask: bytes) -> bytes:
 
 class WebSocket:
     def __init__(self, host: str, port: int, path: str = "/") -> None:
+        self._send_lock = threading.Lock()  # pongs from recv() vs. senders
         self.sock = socket.create_connection((host, port))
         key = base64.b64encode(os.urandom(16)).decode()
         request = (
@@ -51,7 +54,8 @@ class WebSocket:
         else:
             header += bytes([0x80 | 127]) + struct.pack(">Q", n)
         mask = os.urandom(4)
-        self.sock.sendall(header + mask + _mask(data, mask))
+        with self._send_lock:
+            self.sock.sendall(header + mask + _mask(data, mask))
 
     def _read(self, n: int) -> bytes:
         while len(self.buf) < n:

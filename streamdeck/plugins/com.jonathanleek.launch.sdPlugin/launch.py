@@ -1,14 +1,21 @@
-"""Stream Deck plugin: run a command with explicit arguments.
+"""Stream Deck plugin: run commands, show live status, switch profiles.
 
 The Stream Deck app launches run.sh with -port, -pluginUUID, -registerEvent
-and -info. Every key using this plugin carries its command in its settings,
-written by streamdeck/generate.py:
+and -info. Keys and dials carry everything in their settings, written by
+streamdeck/generate.py; there is no property inspector. Actions:
 
-    {"argv": ["/usr/bin/open", "-na", "Ghostty", "--args", "--working-directory=..."],
-     "cwd": "/optional/working/dir"}
-
-Nothing is interpreted: argv goes straight to Popen, no shell. The key shows
-the app's OK tick when the process started, an alert if it could not.
+- run: run a command.
+      {"argv": ["/usr/bin/open", "-a", "Ghostty", "/path/to/repo"],
+       "cwd": "/optional/working/dir"}
+  Nothing is interpreted: argv goes straight to Popen, no shell. The key
+  shows the app's OK tick when the process started, an alert if it could not.
+- status (key) / dial (encoder): live view of a source from sources.py.
+      {"source": "load", ...source settings..., "argv": [...optional, run on press]}
+  The source redraws the key while it is on screen and handles presses,
+  turns and taps; a status key with argv runs that instead of the source's
+  press.
+- switch (key or dial press): show a page of one of our profiles.
+      {"profile": "Customers", "page": 3}   or   {"back": true}
 """
 
 from __future__ import annotations
@@ -19,15 +26,21 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 # run.sh starts us with -I (isolated), which drops this directory from sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from deck import Ctx, Deck  # noqa: E402
 from sdws import WebSocket  # noqa: E402
 
 log = logging.getLogger("launch")
 PLUGIN = "com.jonathanleek.launch"
+RUN = f"{PLUGIN}.run"
+STATUS = f"{PLUGIN}.status"
+DIAL = f"{PLUGIN}.dial"
+SWITCH = f"{PLUGIN}.switch"
 COMMAND_LOG = Path.home() / "Library/Logs" / f"{PLUGIN}.commands.log"
 
 
@@ -50,19 +63,69 @@ def start(settings: dict) -> None:
     out.close()
 
 
-def serve(ws: WebSocket) -> None:
+def switch(deck: Deck, device: str, settings: dict) -> None:
+    if settings.get("back"):
+        deck.switch_profile(device)
+    elif settings.get("profile"):
+        deck.switch_profile(device, settings["profile"], settings.get("page"))
+    else:
+        raise ValueError(f"switch key without profile or back: {settings!r}")
+
+
+def press(deck: Deck, msg: dict) -> None:
+    """keyDown on any of our keys, or dialDown on a dial."""
+    action = msg.get("action")
+    settings = msg.get("payload", {}).get("settings") or {}
+    if action == RUN or (action == STATUS and "argv" in settings):
+        start(settings)
+        deck.send("showOk", msg.get("context"))
+    elif action == SWITCH:
+        switch(deck, msg.get("device", ""), settings)
+    elif ctx := live(deck, msg):
+        ctx.source.press(ctx)
+        deck.refresh(ctx)
+
+
+def live(deck: Deck, msg: dict) -> Ctx | None:
+    """The on-screen key for msg, if it shows a source."""
+    ctx = deck.get(msg.get("context", ""))
+    return ctx if ctx is not None and ctx.source is not None else None
+
+
+def handle(deck: Deck, msg: dict) -> None:
+    event = msg.get("event")
+    payload = msg.get("payload", {})
+    if event == "willAppear":
+        deck.refresh(deck.appear(msg))
+    elif event == "willDisappear":
+        deck.disappear(msg)
+    elif event == "didReceiveSettings":
+        if ctx := deck.get(msg.get("context", "")):
+            ctx.settings = payload.get("settings") or {}
+            deck.refresh(ctx)
+    elif event in ("keyDown", "dialDown"):
+        press(deck, msg)
+    elif event == "dialRotate":
+        if ctx := live(deck, msg):
+            ctx.source.rotate(ctx, int(payload.get("ticks", 0)))
+            deck.refresh(ctx)
+    elif event == "touchTap":
+        if ctx := live(deck, msg):
+            ctx.source.tap(ctx, bool(payload.get("hold")))
+            deck.refresh(ctx)
+
+
+def serve(deck: Deck) -> None:
     while True:
-        msg = json.loads(ws.recv())
-        if msg.get("event") != "keyDown":
-            continue
-        context = msg.get("context")
+        msg = json.loads(deck.ws.recv())
         try:
-            start(msg.get("payload", {}).get("settings", {}))
+            handle(deck, msg)
+        except ConnectionError:
+            raise
         except Exception:
-            log.exception("key %s", context)
-            ws.send(json.dumps({"event": "showAlert", "context": context}))
-        else:
-            ws.send(json.dumps({"event": "showOk", "context": context}))
+            log.exception("%s on %s", msg.get("event"), msg.get("context"))
+            if msg.get("context"):
+                deck.send("showAlert", msg["context"])
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -80,10 +143,15 @@ def main(argv: list[str] | None = None) -> None:
     ws = WebSocket("127.0.0.1", args.port)
     ws.send(json.dumps({"event": args.registerEvent, "uuid": args.pluginUUID}))
     log.info("registered on port %s", args.port)
+    deck = Deck(ws, args.pluginUUID)
+    stop = threading.Event()
+    threading.Thread(target=deck.run_refresher, args=(stop,), daemon=True).start()
     try:
-        serve(ws)
+        serve(deck)
     except ConnectionError as exc:
         log.info("%s; exiting", exc)
+    finally:
+        stop.set()
 
 
 if __name__ == "__main__":

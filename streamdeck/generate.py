@@ -52,8 +52,11 @@ BACKUPS = Path.home() / ".local/state/streamdeck-generator/backups"
 BUILD = HERE / "build"
 NAMESPACE = uuid.UUID("5c2f0d6e-1b7a-4a4e-9c3e-7a1e6b2c9d41")
 
-LAUNCH_PLUGIN = {"Name": "Launch", "UUID": "com.jonathanleek.launch", "Version": "0.1.0"}
+LAUNCH_PLUGIN = {"Name": "Launch", "UUID": "com.jonathanleek.launch", "Version": "0.2.0"}
 LAUNCH_ACTION = "com.jonathanleek.launch.run"
+STATUS_ACTION = "com.jonathanleek.launch.status"
+STATUS_DIAL_ACTION = "com.jonathanleek.launch.dial"
+SWITCH_ACTION = "com.jonathanleek.launch.switch"
 GRIDFINITY_PLUGIN = {"Name": "Gridfinity", "UUID": "com.westboundworkshop.gridfinity", "Version": "0.1.0"}
 GF = "com.westboundworkshop.gridfinity"
 
@@ -247,6 +250,26 @@ def launch_key(argv: list[str], image: Image.Image, cwd: str | None = None) -> K
     if cwd:
         settings["cwd"] = cwd
     return Key(LAUNCH_ACTION, settings, image, LAUNCH_PLUGIN, "Run command")
+
+
+def status_key(source: str, image: Image.Image, argv: list[str] | None = None, **settings) -> Key:
+    """A key the plugin redraws from a source in its sources.py; image is what
+    shows until the plugin first draws it. argv, if given, runs on press."""
+    settings["source"] = source
+    if argv:
+        settings["argv"] = argv
+    return Key(STATUS_ACTION, settings, image, LAUNCH_PLUGIN, "Status")
+
+
+def status_dial(source: str, **settings) -> Dial:
+    return Dial(STATUS_DIAL_ACTION, LAUNCH_PLUGIN, {"source": source, **settings})
+
+
+def switch_key(image: Image.Image, profile: str | None = None, page: int | None = None) -> Key:
+    """Show page `page` of a profile the generator tagged as the plugin's, or
+    with no profile go back to the previous profile."""
+    settings: dict = {"profile": profile, "page": page} if profile else {"back": True}
+    return Key(SWITCH_ACTION, settings, image, LAUNCH_PLUGIN, "Switch page")
 
 
 def open_in(app: str, target: str, label: str, extra: list[str] | None = None) -> Key:
