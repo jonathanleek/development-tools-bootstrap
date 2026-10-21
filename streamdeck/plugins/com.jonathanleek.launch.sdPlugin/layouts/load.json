@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "com.jonathanleek.launch.load",
+  "items": [
+    {"key": "cpu_lbl", "type": "text", "rect": [6, 6, 40, 26], "value": "CPU", "alignment": "left", "color": "#8a919a", "font": {"size": 14, "weight": 600}},
+    {"key": "cpu_bar", "type": "bar", "rect": [48, 14, 98, 10], "value": 0, "subtype": 0, "border_w": 0, "bar_bg_c": "#2b3340", "bar_fill_c": "#c7781c"},
+    {"key": "cpu_val", "type": "text", "rect": [148, 6, 46, 26], "value": "", "alignment": "right", "font": {"size": 16, "weight": 600}},
+    {"key": "gpu_lbl", "type": "text", "rect": [6, 37, 40, 26], "value": "GPU", "alignment": "left", "color": "#8a919a", "font": {"size": 14, "weight": 600}},
+    {"key": "gpu_bar", "type": "bar", "rect": [48, 45, 98, 10], "value": 0, "subtype": 0, "border_w": 0, "bar_bg_c": "#2b3340", "bar_fill_c": "#2f8f83"},
+    {"key": "gpu_val", "type": "text", "rect": [148, 37, 46, 26], "value": "", "alignment": "right", "font": {"size": 16, "weight": 600}},
+    {"key": "mem_lbl", "type": "text", "rect": [6, 68, 40, 26], "value": "MEM", "alignment": "left", "color": "#8a919a", "font": {"size": 14, "weight": 600}},
+    {"key": "mem_bar", "type": "bar", "rect": [48, 76, 98, 10], "value": 0, "subtype": 0, "border_w": 0, "bar_bg_c": "#2b3340", "bar_fill_c": "#4a7fc1"},
+    {"key": "mem_val", "type": "text", "rect": [148, 68, 46, 26], "value": "", "alignment": "right", "font": {"size": 16, "weight": 600}}
+  ]
+}

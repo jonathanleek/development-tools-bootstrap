@@ -9,11 +9,12 @@ streamdeck/generate.py; there is no property inspector. Actions:
        "cwd": "/optional/working/dir"}
   Nothing is interpreted: argv goes straight to Popen, no shell. The key
   shows the app's OK tick when the process started, an alert if it could not.
-- status (key) / dial (encoder): live view of a source from sources.py.
+- status (key) / dial (encoder): live view of a source (sources.py, mac.py).
       {"source": "load", ...source settings..., "argv": [...optional, run on press]}
   The source redraws the key while it is on screen and handles presses,
-  turns and taps; a status key with argv runs that instead of the source's
-  press.
+  turns and taps; with argv, a press runs that instead of the source's
+  press. Status keys act on release, so holding one for HOLD seconds goes to
+  the source's hold instead.
 - switch (key or dial press): show a page of one of our profiles.
       {"profile": "Customers", "page": 3}   or   {"back": true}
 """
@@ -27,11 +28,13 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 # run.sh starts us with -I (isolated), which drops this directory from sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import mac  # noqa: E402, F401 - registers its sources
 from deck import Ctx, Deck  # noqa: E402
 from sdws import WebSocket  # noqa: E402
 
@@ -41,6 +44,7 @@ RUN = f"{PLUGIN}.run"
 STATUS = f"{PLUGIN}.status"
 DIAL = f"{PLUGIN}.dial"
 SWITCH = f"{PLUGIN}.switch"
+HOLD = 1.0  # seconds a status key must be held to count as a hold
 COMMAND_LOG = Path.home() / "Library/Logs" / f"{PLUGIN}.commands.log"
 
 
@@ -72,11 +76,15 @@ def switch(deck: Deck, device: str, settings: dict) -> None:
         raise ValueError(f"switch key without profile or back: {settings!r}")
 
 
-def press(deck: Deck, msg: dict) -> None:
-    """keyDown on any of our keys, or dialDown on a dial."""
+def press(deck: Deck, msg: dict, held: bool = False) -> None:
+    """A press on any of our keys (status keys: on release) or dials."""
     action = msg.get("action")
     settings = msg.get("payload", {}).get("settings") or {}
-    if action == RUN or (action == STATUS and "argv" in settings):
+    if held and (ctx := live(deck, msg)) and ctx.source.holds:
+        ctx.source.hold(ctx)
+        deck.send("showOk", ctx.context)
+        deck.refresh(ctx)
+    elif "argv" in settings and action in (RUN, STATUS, DIAL):
         start(settings)
         deck.send("showOk", msg.get("context"))
     elif action == SWITCH:
@@ -103,6 +111,13 @@ def handle(deck: Deck, msg: dict) -> None:
         if ctx := deck.get(msg.get("context", "")):
             ctx.settings = payload.get("settings") or {}
             deck.refresh(ctx)
+    elif event == "keyDown" and msg.get("action") == STATUS:
+        if ctx := deck.get(msg.get("context", "")):
+            ctx.state["_down"] = time.monotonic()
+    elif event == "keyUp" and msg.get("action") == STATUS:
+        ctx = deck.get(msg.get("context", ""))
+        down = ctx.state.pop("_down", None) if ctx else None
+        press(deck, msg, held=down is not None and time.monotonic() - down >= HOLD)
     elif event in ("keyDown", "dialDown"):
         press(deck, msg)
     elif event == "dialRotate":

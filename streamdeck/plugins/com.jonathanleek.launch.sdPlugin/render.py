@@ -7,11 +7,13 @@ change with it.
 
 from __future__ import annotations
 
+import base64
 from xml.sax.saxutils import escape
 
 TILE = 144
 
 C_BASE = "#1e2227"
+C_REPO = "#1f4f4a"
 C_HOME = "#30343a"
 C_ACCENT = "#c7781c"
 C_TEXT = "#f2f2f2"
@@ -51,5 +53,6 @@ def _text(s: str, y: float, size: int, fill: str) -> str:
 
 
 def data_url(svg: str) -> str:
-    """The form setImage takes for SVG (per the Stream Deck SDK docs)."""
-    return "data:image/svg+xml;charset=utf8," + svg
+    """The form setImage takes. Base64, not the SDK docs' raw
+    `charset=utf8,<svg…>`: raw, the first `#` of a colour ends the URL."""
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()

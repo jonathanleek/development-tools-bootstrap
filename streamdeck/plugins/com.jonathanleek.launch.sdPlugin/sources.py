@@ -22,6 +22,7 @@ class View:
     title: str | None = None
     image: str | None = None  # SVG markup (render.py)
     feedback: dict | None = None  # dial touch strip: layout item -> value
+    layout: str | None = None  # dial touch strip layout, e.g. "layouts/load.json"
 
 
 class Source:
@@ -32,6 +33,14 @@ class Source:
 
     def press(self, ctx: Ctx) -> None:
         """Key press, or dial press."""
+
+    def hold(self, ctx: Ctx) -> None:
+        """Key held for HOLD seconds. Only called on sources that define it;
+        for the rest a hold is an ordinary press."""
+
+    @property
+    def holds(self) -> bool:
+        return type(self).hold is not Source.hold
 
     def rotate(self, ctx: Ctx, ticks: int) -> None:
         """Dial turned; ticks is negative for counter-clockwise."""

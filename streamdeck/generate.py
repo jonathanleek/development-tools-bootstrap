@@ -10,7 +10,8 @@
 
 Pages are derived, not hand-placed:
 
-- Home: Astronomer, Meeting, Gridfinity, Rescan.
+- Home: Astronomer, Meeting, Gridfinity, Rescan; a live containers key and
+  the load dial (CPU / GPU / memory), both drawn by the Launch plugin.
 - Astronomer: walks ~/Documents/git/astronomer one page per folder. A folder
   that is a git repo gets a repo page (Ghostty here, PyCharm, Finder). The
   customers folder is the union of customer folders and the vault's Active
@@ -252,13 +253,14 @@ def launch_key(argv: list[str], image: Image.Image, cwd: str | None = None) -> K
     return Key(LAUNCH_ACTION, settings, image, LAUNCH_PLUGIN, "Run command")
 
 
-def status_key(source: str, image: Image.Image, argv: list[str] | None = None, **settings) -> Key:
-    """A key the plugin redraws from a source in its sources.py; image is what
-    shows until the plugin first draws it. argv, if given, runs on press."""
+def status_key(source: str, argv: list[str] | None = None, **settings) -> Key:
+    """A key the plugin draws from one of its sources. No image here: the app
+    treats a profile image as the user's choice and ignores the plugin's
+    setImage over it. argv, if given, runs on press."""
     settings["source"] = source
     if argv:
         settings["argv"] = argv
-    return Key(STATUS_ACTION, settings, image, LAUNCH_PLUGIN, "Status")
+    return Key(STATUS_ACTION, settings, None, LAUNCH_PLUGIN, "Status")
 
 
 def status_dial(source: str, **settings) -> Dial:
@@ -651,6 +653,10 @@ def home_page(profile: Profile) -> Page:
         tile(["Rescan"], C_HOME, footer="navigator"),
         cwd=str(REPO),
     )
+    # live, drawn by the Launch plugin (mac.py); the rightmost dial is kept
+    # for the active-customers dial, the easiest one to reach
+    home.keys[(2, 1)] = status_key("containers", argv=["/usr/bin/open", "-a", "OrbStack"])
+    home.dials[0] = status_dial("load", argv=["/usr/bin/open", "-a", "Activity Monitor"])
     return home
 
 

@@ -7,6 +7,7 @@ Runs on the system Python, like the plugin itself.
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
 import unittest
@@ -57,6 +58,11 @@ class Broken(Source):
         raise RuntimeError("boom")
 
 
+def svg(set_image: dict) -> str:
+    """The SVG markup inside a setImage message."""
+    return base64.b64decode(set_image["payload"]["image"].split(",", 1)[1]).decode()
+
+
 def appear(context: str, action: str, settings: dict, controller: str = "Keypad") -> dict:
     return {
         "event": "willAppear", "action": action, "context": context, "device": "dev1",
@@ -64,7 +70,7 @@ def appear(context: str, action: str, settings: dict, controller: str = "Keypad"
     }
 
 
-class PluginTest(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self) -> None:
         SOURCES["counter"] = Counter()
         SOURCES["broken"] = Broken()
@@ -76,11 +82,24 @@ class PluginTest(unittest.TestCase):
     def handle(self, msg: dict) -> None:
         launch.handle(self.deck, msg)
 
+    def tap_key(self, settings: dict, seconds: float = 0.1, context: str = "k1") -> None:
+        """Press and release a status key, holding it for `seconds`."""
+        msg = {"action": launch.STATUS, "context": context, "payload": {"settings": settings}}
+        with mock.patch.object(launch.time, "monotonic", return_value=100.0):
+            self.handle({"event": "keyDown", **msg})
+        with mock.patch.object(launch.time, "monotonic", return_value=100.0 + seconds):
+            self.handle({"event": "keyUp", **msg})
+
+
+class PluginTest(Base):
+
     def test_status_key_draws_on_appear(self):
         self.handle(appear("k1", launch.STATUS, {"source": "counter"}))
         (img,) = self.ws.events("setImage")
         self.assertEqual(img["context"], "k1")
-        self.assertTrue(img["payload"]["image"].startswith("data:image/svg+xml;charset=utf8,<svg"))
+        self.assertTrue(img["payload"]["image"].startswith("data:image/svg+xml;base64,"))
+        self.assertNotIn("#", img["payload"]["image"])  # a raw '#' would end the URL
+        self.assertTrue(svg(img).startswith("<svg"))
         self.assertEqual(self.ws.events("setTitle")[0]["payload"]["title"], "0")
 
     def test_only_changes_are_sent(self):
@@ -126,7 +145,7 @@ class PluginTest(unittest.TestCase):
         with self.assertLogs("launch.deck", "ERROR"):
             self.handle(appear("k1", launch.STATUS, {"source": "broken"}))
         (img,) = self.ws.events("setImage")
-        self.assertIn(">error<", img["payload"]["image"])
+        self.assertIn(">error<", svg(img))
 
     def test_switch_key(self):
         self.handle({"event": "keyDown", "action": launch.SWITCH, "context": "s1", "device": "dev1",
@@ -161,16 +180,92 @@ class PluginTest(unittest.TestCase):
         self.handle(appear("k1", launch.STATUS, settings))
         self.deck.get("k1").state["n"] = 4
         with mock.patch.object(launch, "start") as start:
-            self.handle({"event": "keyDown", "action": launch.STATUS, "context": "k1", "payload": {"settings": settings}})
+            self.tap_key(settings)
         start.assert_called_once()
         self.assertEqual(self.deck.get("k1").state["n"], 4)  # source press not called
 
     def test_status_key_press_goes_to_source(self):
         self.handle(appear("k1", launch.STATUS, {"source": "counter"}))
         self.deck.get("k1").state["n"] = 4
-        self.handle({"event": "keyDown", "action": launch.STATUS, "context": "k1",
-                     "payload": {"settings": {"source": "counter"}}})
+        self.tap_key({"source": "counter"})
         self.assertEqual(self.ws.events("setTitle")[-1]["payload"]["title"], "0")
+
+
+class Holder(Counter):
+    def hold(self, ctx):
+        ctx.state["n"] = 99
+
+
+class HoldTest(Base):
+    def setUp(self) -> None:
+        super().setUp()
+        SOURCES["holder"] = Holder()
+        self.addCleanup(SOURCES.pop, "holder")
+
+    def test_short_press_is_press_long_is_hold(self):
+        self.handle(appear("k1", launch.STATUS, {"source": "holder"}))
+        self.deck.get("k1").state["n"] = 4
+        self.tap_key({"source": "holder"}, 0.2)
+        self.assertEqual(self.deck.get("k1").state["n"], 0)
+        self.tap_key({"source": "holder"}, 1.5)
+        self.assertEqual(self.deck.get("k1").state["n"], 99)
+
+    def test_hold_without_hold_hook_runs_argv(self):
+        settings = {"source": "counter", "argv": ["/usr/bin/true"]}
+        self.handle(appear("k1", launch.STATUS, settings))
+        with mock.patch.object(launch, "start") as start:
+            self.tap_key(settings, 1.5)
+        start.assert_called_once()
+
+    def test_dial_press_runs_argv(self):
+        settings = {"source": "counter", "argv": ["/usr/bin/open", "-a", "Activity Monitor"]}
+        self.handle(appear("d1", launch.DIAL, settings, "Encoder"))
+        with mock.patch.object(launch, "start") as start:
+            self.handle({"event": "dialDown", "action": launch.DIAL, "context": "d1", "payload": {"settings": settings}})
+        start.assert_called_once_with(settings)
+
+
+class MacSourcesTest(Base):
+    def setUp(self) -> None:
+        super().setUp()
+        for name, value in {
+            "cpu_percent": 37.4, "gpu_percent": 12.0, "memory": (160.4, 256.0, 2),
+            "top_processes": [("WindowServer", 43.0, 0.9), ("Plex", 18.2, 0.95)],
+        }.items():
+            p = mock.patch.object(launch.mac, name, return_value=value)
+            p.start()
+            self.addCleanup(p.stop)
+
+    def test_load_overview_then_turn_to_top_lists(self):
+        self.handle(appear("d1", launch.DIAL, {"source": "load"}, "Encoder"))
+        self.assertEqual(self.ws.events("setFeedbackLayout")[-1]["payload"], {"layout": "layouts/load.json"})
+        fb = self.ws.events("setFeedback")[-1]["payload"]
+        self.assertEqual((fb["cpu_val"], fb["gpu_val"], fb["mem_val"]), ("37%", "12%", "160G"))
+        self.assertEqual(fb["mem_bar"], {"value": 63, "bar_fill_c": launch.mac.C_MEM[2]})
+
+        self.handle({"event": "dialRotate", "action": launch.DIAL, "context": "d1", "payload": {"ticks": 1}})
+        self.assertEqual(self.ws.events("setFeedbackLayout")[-1]["payload"], {"layout": "layouts/top.json"})
+        fb = self.ws.events("setFeedback")[-1]["payload"]
+        self.assertEqual((fb["head"], fb["name0"], fb["val0"], fb["name2"], fb["val2"]),
+                         ("Top CPU", "WindowServer", "43%", "", ""))
+
+        self.handle({"event": "dialRotate", "action": launch.DIAL, "context": "d1", "payload": {"ticks": 1}})
+        self.assertEqual(self.ws.events("setFeedback")[-1]["payload"]["val1"], "0.9G")
+        self.handle({"event": "dialRotate", "action": launch.DIAL, "context": "d1", "payload": {"ticks": 1}})
+        self.assertEqual(self.ws.events("setFeedbackLayout")[-1]["payload"], {"layout": "layouts/load.json"})
+
+    def test_containers_states(self):
+        cases = [
+            (None, ">off<"),
+            ([], ">0<"),
+            (["example-project_f98708"] * 6, ">example-project<"),
+            (["a", "b"], ">2 projects<"),
+        ]
+        for running, expect in cases:
+            with self.subTest(running=running), mock.patch.object(launch.mac, "running_containers", return_value=running):
+                self.ws.sent.clear()
+                self.handle(appear(f"k{expect}", launch.STATUS, {"source": "containers"}))
+                self.assertIn(expect, svg(self.ws.events("setImage")[0]))
 
 
 if __name__ == "__main__":

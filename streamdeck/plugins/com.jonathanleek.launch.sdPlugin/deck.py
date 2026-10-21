@@ -114,7 +114,10 @@ class Deck:
             self.send("setTitle", ctx.context, {"title": view.title, "target": 0})
         if view.image != old.image and view.image is not None:
             self.send("setImage", ctx.context, {"image": render.data_url(view.image), "target": 0})
-        if view.feedback != old.feedback and view.feedback is not None:
+        new_layout = view.layout != old.layout and view.layout is not None
+        if new_layout:
+            self.send("setFeedbackLayout", ctx.context, {"layout": view.layout})
+        if (new_layout or view.feedback != old.feedback) and view.feedback is not None:
             self.send("setFeedback", ctx.context, view.feedback)
         ctx.shown = view
         ctx.due = now + src.interval
