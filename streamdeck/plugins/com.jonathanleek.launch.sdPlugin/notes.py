@@ -16,6 +16,7 @@ import datetime as dt
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -74,8 +75,26 @@ def ask_title(client: Path) -> str | None:
     return title or None
 
 
+REVEAL = "file-explorer:reveal-active-file"  # "Reveal current file in navigation"
+
+
+def vault_of(path: Path) -> Path | None:
+    """The vault folder (the one holding .obsidian) above path."""
+    return next((p for p in path.parents if (p / ".obsidian").is_dir()), None)
+
+
 def open_in_obsidian(path: Path) -> None:
+    """Open the note, then reveal it in the file explorer. Two steps: the
+    plain path link copes with a note Obsidian hasn't indexed yet; the
+    reveal is a command, which only the Advanced URI plugin can run from a
+    link, on whatever note is then active."""
     subprocess.run(["/usr/bin/open", f"obsidian://open?path={quote(str(path))}"], check=False)
+    vault = vault_of(path)
+    if vault is None:
+        return
+    time.sleep(1.0)  # let the note become the active file first
+    subprocess.run(["/usr/bin/open", f"obsidian://adv-uri?vault={quote(vault.name)}&commandid={quote(REVEAL, safe='')}"],
+                   check=False)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -417,6 +417,13 @@ class NotesTest(unittest.TestCase):
         (self.client / "notes").rmdir()
         self.assertEqual(notes.create(self.client, "Sync", self.DAY).parent, self.client)
 
+    def test_vault_found_above_note(self):
+        vault = self.client.parent
+        (vault / ".obsidian").mkdir()
+        self.assertEqual(notes.vault_of(self.client / "notes" / "2026.10.20 - Sync.md"), vault)
+        (vault / ".obsidian").rmdir()
+        self.assertIsNone(notes.vault_of(self.client / "notes" / "x.md"))
+
     def test_title_cleaned_for_file_name(self):
         self.assertEqual(notes.clean_title("  Q3 / Q4: [plan] #1 \n"), "Q3 Q4 plan 1")
 

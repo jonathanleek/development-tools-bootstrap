@@ -301,10 +301,17 @@ def finder_key(path: Path) -> Key:
     return launch_key(["/usr/bin/open", str(path)], tile(["Finder"], C_BASE, app_icon("Finder")))
 
 
+REVEAL = "file-explorer:reveal-active-file"  # Obsidian's "Reveal current file in navigation"
+
+
 def obsidian_key(vault: str, note: str | None, label: list[str]) -> Key:
-    url = f"obsidian://open?vault={quote(vault)}"
+    """Opens the vault, or a note and reveals it in the file explorer. The
+    reveal needs the Advanced URI community plugin (obsidian-advanced-uri):
+    plain obsidian:// links can open a note but not run a command."""
     if note:
-        url += f"&file={quote(note)}"
+        url = f"obsidian://adv-uri?vault={quote(vault)}&filepath={quote(note + '.md', safe='')}&commandid={quote(REVEAL, safe='')}"
+    else:
+        url = f"obsidian://open?vault={quote(vault)}"
     return launch_key(["/usr/bin/open", url], tile(label, C_BASE, app_icon(CONFIG["apps"]["obsidian"])))
 
 
