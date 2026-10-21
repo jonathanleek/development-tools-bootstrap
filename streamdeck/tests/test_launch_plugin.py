@@ -19,6 +19,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins/com.jonathanleek.launch.sdPlugin"))
 
 import launch  # noqa: E402
+import notes  # noqa: E402
 import render  # noqa: E402
 from deck import Deck  # noqa: E402
 from sources import SOURCES, Source, View  # noqa: E402
@@ -353,6 +354,78 @@ class CustomersTest(Base):
         os.utime(path, (1, 1))
         self.deck.refresh(self.deck.get("d1"))
         self.assertEqual(self.strip()["name"], "Faire Wholesale")
+
+
+class CameraDialTest(Base):
+    MODES = [{"name": "Meeting", "vk": 18, "mods": ["ctrl", "option", "cmd"]},
+             {"name": "Whiteboard", "vk": 19, "mods": ["ctrl", "option", "cmd"]}]
+
+    def test_turn_picks_press_enters(self):
+        settings = {"source": "camera", "modes": self.MODES}
+        self.handle(appear("c1", launch.DIAL, settings, "Encoder"))
+        self.assertEqual(self.ws.events("setFeedback")[-1]["payload"],
+                         {"name": "Meeting", "info": "Camera · press to switch"})
+        self.handle({"event": "dialRotate", "action": launch.DIAL, "context": "c1", "payload": {"ticks": 1}})
+        with mock.patch.object(launch.camera, "post_key") as post:
+            self.handle({"event": "dialDown", "action": launch.DIAL, "context": "c1", "payload": {"settings": settings}})
+        post.assert_called_once_with(19, ["ctrl", "option", "cmd"])
+        self.assertEqual(self.ws.events("setFeedback")[-1]["payload"],
+                         {"name": "Whiteboard", "info": "Camera · current"})
+
+
+class LocalTimeTest(unittest.TestCase):
+    NOON_UTC = launch.customers.dt.datetime(2026, 10, 20, 17, 0, tzinfo=launch.customers.dt.timezone.utc)
+
+    def test_names_and_aliases(self):
+        lt = launch.customers.local_time
+        self.assertEqual(lt("America/Chicago", self.NOON_UTC), "12:00 PM CDT")
+        self.assertEqual(lt("Eastern", self.NOON_UTC), "1:00 PM EDT")
+        self.assertEqual(lt(" pacific ", self.NOON_UTC), "10:00 AM PDT")
+        self.assertEqual(lt("", self.NOON_UTC), "")
+        self.assertEqual(lt("Narnia/Lantern", self.NOON_UTC), "time zone?")
+
+    def test_dial_strip_shows_local_time(self):
+        index = [{"key": "faire", "label": "Faire", "section": "Active", "footer": "", "page": 1, "tz": "Pacific"}]
+        with mock.patch.object(launch.customers, "index", return_value={"profile": "Customers", "customers": index}), \
+                mock.patch.object(launch.customers, "local_time", return_value="10:00 AM PDT"):
+            ws = FakeWS()
+            launch.handle(Deck(ws, "p"), appear("d1", launch.DIAL, {"source": "customers"}, "Encoder"))
+        self.assertEqual(ws.events("setFeedback")[-1]["payload"]["info"], "1 / 1 · 10:00 AM PDT")
+
+
+class NotesTest(unittest.TestCase):
+    DAY = launch.customers.dt.date(2026, 10, 20)
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.client = Path(tmp.name) / "Faire"
+        (self.client / "notes").mkdir(parents=True)
+
+    def test_create_in_notes_folder_with_skeleton(self):
+        path = notes.create(self.client, "Weekly Sync", self.DAY)
+        self.assertEqual(path, self.client / "notes" / "2026.10.20 - Weekly Sync.md")
+        self.assertEqual(path.read_text(), "## Notes\n\n\n\n## Actions\n\n- [ ] \n")
+
+    def test_existing_note_is_not_overwritten(self):
+        path = notes.create(self.client, "Sync", self.DAY)
+        path.write_text("kept")
+        self.assertEqual(notes.create(self.client, "Sync", self.DAY).read_text(), "kept")
+
+    def test_client_without_notes_folder_uses_its_own_folder(self):
+        (self.client / "notes").rmdir()
+        self.assertEqual(notes.create(self.client, "Sync", self.DAY).parent, self.client)
+
+    def test_title_cleaned_for_file_name(self):
+        self.assertEqual(notes.clean_title("  Q3 / Q4: [plan] #1 \n"), "Q3 Q4 plan 1")
+
+    def test_today_note_is_newest_of_the_day(self):
+        self.assertIsNone(notes.today_note(self.client, self.DAY))
+        first = notes.create(self.client, "Sync", self.DAY)
+        second = notes.create(self.client, "Work Session", self.DAY)
+        os.utime(first, (1, 1))
+        notes.create(self.client, "Old", launch.customers.dt.date(2026, 10, 19))
+        self.assertEqual(notes.today_note(self.client, self.DAY), second)
 
 
 if __name__ == "__main__":

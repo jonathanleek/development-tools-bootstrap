@@ -34,6 +34,7 @@ from pathlib import Path
 # run.sh starts us with -I (isolated), which drops this directory from sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import camera  # noqa: E402, F401 - registers its sources
 import customers  # noqa: E402 - registers its sources
 import mac  # noqa: E402, F401 - registers its sources
 from deck import Ctx, Deck  # noqa: E402

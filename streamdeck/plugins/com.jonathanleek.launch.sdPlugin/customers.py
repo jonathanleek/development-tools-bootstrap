@@ -9,9 +9,11 @@ plugin records the visit, newest first, in recent.json beside the index.
 from __future__ import annotations
 
 import bisect
+import datetime as dt
 import json
 import os
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import render
 from sources import Source, View, source
@@ -59,6 +61,30 @@ def visit(key: str) -> None:
     os.replace(tmp, STATE / "recent.json")
 
 
+ZONE_ALIASES = {
+    "eastern": "America/New_York", "et": "America/New_York", "est": "America/New_York", "edt": "America/New_York",
+    "central": "America/Chicago", "ct": "America/Chicago", "cst": "America/Chicago", "cdt": "America/Chicago",
+    "mountain": "America/Denver", "mt": "America/Denver", "mst": "America/Denver", "mdt": "America/Denver",
+    "pacific": "America/Los_Angeles", "pt": "America/Los_Angeles", "pst": "America/Los_Angeles",
+    "pdt": "America/Los_Angeles",
+}
+
+
+def local_time(tz: str, now: dt.datetime | None = None) -> str:
+    """"10:42 AM CDT" for the Client Info "Time Zone" value (an IANA name like
+    America/Chicago, or Eastern / Central / Mountain / Pacific); "" if unset,
+    "time zone?" if it can't be read."""
+    tz = tz.strip()
+    if not tz:
+        return ""
+    try:
+        zone = ZoneInfo(ZONE_ALIASES.get(tz.lower(), tz))
+    except (ZoneInfoNotFoundError, ValueError):
+        return "time zone?"
+    t = (now or dt.datetime.now(dt.timezone.utc)).astimezone(zone)
+    return t.strftime("%-I:%M %p %Z")
+
+
 def open_page(ctx, c: dict) -> None:
     ctx.deck.switch_profile(ctx.device, index()["profile"], c["page"])
 
@@ -67,9 +93,10 @@ def open_page(ctx, c: dict) -> None:
 class CustomersDial(Source):
     """Active customers, alphabetical. On Home it starts at the most recent
     one; turn to browse, press to open. On a customer page (settings carry
-    "current") turning moves straight to the neighbouring customer's page."""
+    "current") turning moves straight to the neighbouring customer's page.
+    The strip shows the customer's local time when Client Info has one."""
 
-    interval = 30.0
+    interval = 15.0  # keeps the local time within a quarter minute
 
     def appear(self, ctx):
         current = ctx.settings.get("current")
@@ -111,6 +138,9 @@ class CustomersDial(Source):
         if c is None:
             return View(layout="layouts/customer.json", feedback={"name": "No customers", "info": ""})
         info = f"{keys.index(c['key']) + 1} / {len(keys)}" if c["key"] in keys else "inactive"
+        when = local_time(c.get("tz", ""))
+        if when:
+            info += f" · {when}"
         return View(layout="layouts/customer.json", feedback={"name": c["label"], "info": info})
 
 

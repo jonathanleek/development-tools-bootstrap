@@ -53,6 +53,7 @@ STATE = Path.home() / ".local/state/streamdeck-generator"
 BACKUPS = STATE / "backups"
 CUSTOMER_INDEX = STATE / "customers.json"  # read by the Launch plugin (customers.py)
 CUSTOMERS_PROFILE = "Customers"
+NOTES_PY = HERE / "plugins/com.jonathanleek.launch.sdPlugin/notes.py"
 BUILD = HERE / "build"
 NAMESPACE = uuid.UUID("5c2f0d6e-1b7a-4a4e-9c3e-7a1e6b2c9d41")
 
@@ -426,6 +427,26 @@ class Customer:
         v = CONFIG["vault"]
         return f"{v['clients_root']}/{self.section}/{self.note_folder}/{v['client_note']}"
 
+    @property
+    def vault_dir(self) -> Path | None:
+        """The client's folder in the vault, where call notes go."""
+        if not self.note_folder:
+            return None
+        v = CONFIG["vault"]
+        return expand(v["path"]) / v["clients_root"] / self.section / self.note_folder
+
+
+def client_field(c: Customer, field_name: str) -> str:
+    """A row's value from the Client Info table ("| Time Zone | Eastern | |"),
+    or "" when the note or row is missing."""
+    if not c.note:
+        return ""
+    note = expand(CONFIG["vault"]["path"]) / f"{c.note}.md"
+    if not note.is_file():
+        return ""
+    m = re.search(rf"^\|\s*{re.escape(field_name)}\s*\|([^|\n]*)\|", note.read_text(errors="replace"), re.M | re.I)
+    return m.group(1).strip() if m else ""
+
 
 def slack_channels(c: Customer) -> dict[str, str]:
     """Channel IDs from the client's Client Info note: table rows named
@@ -474,6 +495,9 @@ def customer_page(profile: Profile, c: Customer) -> Page:
     entries: list[Key] = []
     if c.note:
         entries.append(obsidian_key(CONFIG["vault"]["name"], c.note, ["Notes"]))
+    if c.vault_dir:
+        entries.append(call_note_key(c))
+    entries.append(folder_key(customer_meeting_page(profile, c), tile(["Call ▸"], C_HOME, app_icon("zoom.us"))))
     if c.folder:
         entries.append(finder_key(c.folder))
     channels = slack_channels(c)
@@ -517,7 +541,10 @@ class CustomerBook:
         """Build c's page; returns its page number in the profile."""
         n = len(self.pages)
         self.pages.append(customer_page(self.profile, c))
-        self.index.append({"key": c.key, "label": c.label, "section": c.section, "footer": c.footer, "page": n})
+        self.index.append({
+            "key": c.key, "label": c.label, "section": c.section, "footer": c.footer, "page": n,
+            "tz": client_field(c, "Time Zone"),
+        })
         return n
 
 
@@ -663,6 +690,45 @@ def meeting_keys(profile: Profile, page: Page, key: str) -> None:
     page.dials[1] = hotkey_dial(camera_chord(cam["zoom_out"]), camera_chord(cam["zoom_in"]), camera_chord(cam["center"]))
     page.dials[2] = hotkey_dial(camera_chord(cam["left"]), camera_chord(cam["right"]))
     page.dials[3] = hotkey_dial(camera_chord(cam["down"]), camera_chord(cam["up"]))
+
+
+def call_note_key(c: Customer) -> Key:
+    """Asks for a title, then creates and opens `YYYY.MM.DD - <Title>.md`
+    in the client's vault folder (notes.py, run as its own process)."""
+    argv = ["/usr/bin/python3", "-I", str(NOTES_PY), "new", str(c.vault_dir)]
+    return launch_key(argv, tile(["Call", "note"], C_BASE, app_icon(CONFIG["apps"]["obsidian"])))
+
+
+def camera_dial() -> Dial:
+    """Turn to pick a framing, press to switch the webcam to it (the plugin
+    posts the Link Controller shortcut; camera.py)."""
+    cam = CONFIG["camera"]
+    modes = [
+        {"name": name, "vk": VK[cam["keys"][k]], "mods": cam["modifiers"]}
+        for name, k in (("Meeting", "face"), ("Whiteboard", "whiteboard"))
+    ]
+    return status_dial("camera", modes=modes)
+
+
+def customer_meeting_page(profile: Profile, c: Customer) -> Page:
+    """Meeting, for one customer: Zoom, that customer's call note and
+    internal Slack channel, and the camera framings on the rightmost dial. No
+    volume or camera zoom / pan / tilt dials here, by choice."""
+    page = profile.page(f"customer-meeting:{c.key}", f"{c.label} call")
+    page.keys[(0, 0)] = back()
+    page.keys[(1, 0)] = zoom_key("mute", 2)
+    page.keys[(2, 0)] = zoom_key("video", 2)
+    page.keys[(3, 0)] = zoom_key("screenshare", 2)
+    if c.vault_dir:
+        page.keys[(0, 1)] = call_note_key(c)
+    if c.note:  # until the whiteboard snap takes this key
+        page.keys[(1, 1)] = obsidian_key(CONFIG["vault"]["name"], c.note, ["Client", "Info"])
+    internal = slack_channels(c).get("internal")
+    if internal:
+        page.keys[(2, 1)] = slack_key(internal, "Internal")
+    page.keys[(3, 1)] = zoom_key("leavemeeting", 1)
+    page.dials[3] = camera_dial()
+    return page
 
 
 def meeting_page(profile: Profile) -> Page:

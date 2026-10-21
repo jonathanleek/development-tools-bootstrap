@@ -129,7 +129,15 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
   channel link. Customer pages live in a second generated profile,
   **Customers** (page 0 Recent, then one page per customer), which the
   client keys switch to and Back returns from; on a customer page the
-  rightmost dial turns to the next or previous active customer.
+  rightmost dial turns to the next or previous active customer, and shows
+  their local time when the note's `Time Zone` row is set (`America/Chicago`
+  or `Eastern` / `Central` / `Mountain` / `Pacific`). **Call note** asks for
+  a title (default *Sync*) and creates `YYYY.MM.DD - <Title>.md` in the
+  client's `notes/` folder with Notes / Actions headings, or opens it if it
+  exists. **Call ▸** is that customer's meeting page: Zoom keys, Call note,
+  Client Info, internal Slack, and a camera dial (turn for Meeting /
+  Whiteboard framing, press to switch; the plugin posts Link Controller's
+  shortcut).
 - **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave) plus
   Meeting / Whiteboard / Desk and zoom / pan / tilt dials, which send Insta360
   Link Controller's global shortcuts. Deliberately a folder off Home rather
