@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "com.jonathanleek.launch.top",
+  "items": [
+    {"key": "head", "type": "text", "rect": [6, 2, 188, 22], "value": "", "alignment": "left", "color": "#8a919a", "font": {"size": 14, "weight": 600}},
+    {"key": "name0", "type": "text", "rect": [6, 26, 136, 22], "value": "", "alignment": "left", "text-overflow": "ellipsis", "font": {"size": 15, "weight": 500}},
+    {"key": "val0", "type": "text", "rect": [144, 26, 50, 22], "value": "", "alignment": "right", "font": {"size": 15, "weight": 600}},
+    {"key": "name1", "type": "text", "rect": [6, 50, 136, 22], "value": "", "alignment": "left", "text-overflow": "ellipsis", "font": {"size": 15, "weight": 500}},
+    {"key": "val1", "type": "text", "rect": [144, 50, 50, 22], "value": "", "alignment": "right", "font": {"size": 15, "weight": 600}},
+    {"key": "name2", "type": "text", "rect": [6, 74, 136, 22], "value": "", "alignment": "left", "text-overflow": "ellipsis", "font": {"size": 15, "weight": 500}},
+    {"key": "val2", "type": "text", "rect": [144, 74, 50, 22], "value": "", "alignment": "right", "font": {"size": 15, "weight": 600}}
+  ]
+}

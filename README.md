@@ -17,6 +17,7 @@ development environment. Assumes `zsh`. **Idempotent** — safe to re-run.
 | `scripts/make-dirs.sh` | Creates the `~/Documents/git/<org>/` directory structure, installs `mi6`, and gives every folder a `.mi6/` layer |
 | `scripts/vaults.sh` | Clones the Obsidian/data vaults and registers them with Obsidian |
 | `scripts/claude-env.sh` | Reproduces the Claude Code environment (plugins, config) |
+| `scripts/streamdeck.sh` + `streamdeck/` | Stream Deck +: links the plugins, generates the profile from disk (see below) |
 | `dotfiles/` + `scripts/dotfiles.sh` | Shell dotfiles, symlinked into `$HOME` (see below) |
 | `claude-config/` | Canonical Claude config: `CLAUDE.md`, `statusline.sh`, `settings.json`, hook patch |
 
@@ -50,6 +51,7 @@ if you ran it from a download); anything already in the way is moved to
 12. Generates an SSH key and adds it to GitHub (reuses a restored key if present).
 13. Clones the Obsidian/data vaults and registers them with Obsidian.
 14. Reproduces the Claude Code environment.
+15. Sets up the Stream Deck + (plugins, generated profile, Link Controller login item).
 
 ### Secret restore (step 11)
 
@@ -100,3 +102,80 @@ Agent configuration per folder comes from
 the stub set of files `mi6` reads; the instructions, permissions, and env
 in each layer are filled by hand. Set `GIT_ROOT` to build the tree
 somewhere else.
+
+## Stream Deck +
+
+The deck's profile is **generated from what's on disk**, not hand-built.
+`streamdeck/generate.py` (run with `uv`) writes it straight into the Stream
+Deck app's profile folder; `scripts/streamdeck.sh` links the plugins and runs
+it. Re-run either after adding a customer folder, a repo, or a client note,
+or press **Rescan** on the deck (it restarts the app, ~5 s).
+
+- **Home**: Astronomer, Meeting, Gridfinity, Rescan; **Recent** (the last
+  seven customer pages opened) and a live **containers** key (running
+  OrbStack containers by project; press opens OrbStack, hold 1 s stops them
+  all). Leftmost dial: CPU / GPU / memory, turn for the top CPU and memory
+  processes, press for Activity Monitor. Rightmost dial: active customers,
+  alphabetical from the most recent one; press opens that customer.
+- **Astronomer** walks `~/Documents/git/astronomer` one page per folder down
+  to each git repo: Ghostty here, PyCharm, Finder. **Customers** is the union
+  of `customers/` folders and the Astronomer vault's `! Clients` notes, and the
+  vault's Active / Inactive folders decide where a customer shows: Active ones
+  on the Customers pages, Inactive ones behind an **Inactive ▸** key placed
+  last so it sits on the final page. Each customer page has Notes (Obsidian),
+  Finder, Slack Internal / External, and its repos. Slack channels come from the client's `Client Info` note —
+  rows `Slack (internal)` / `Slack (external)` holding `#channel-name` (looked
+  up in `streamdeck/slack-channels.json`; add a line for a new name) or a
+  channel link. Customer pages live in a second generated profile,
+  **Customers** (page 0 Recent, then one page per customer), which the
+  client keys switch to and Back returns from; on a customer page the
+  rightmost dial turns to the next or previous active customer, and shows
+  their local time when the note's `Time Zone` row is set (`America/Chicago`
+  or `Eastern` / `Central` / `Mountain` / `Pacific`). **Call note** asks for
+  a title (default *Sync*) and creates `YYYY.MM.DD - <Title>.md` in the
+  client's `notes/` folder with Notes / Actions headings, or opens it if it
+  exists. **Call ▸** is that customer's meeting page: Zoom keys, Call note,
+  **Snap**, internal Slack, and a camera dial (turn for Meeting / Whiteboard
+  framing, press to switch; the plugin posts Link Controller's shortcut).
+  Snap turns the camera to Whiteboard framing (whiteboard mode), takes a
+  still, turns back to Meeting, and puts the photo in the vault's `Images/`,
+  on the clipboard, and at the end of the Notes section of today's call
+  note (creating `YYYY.MM.DD - Sync.md` if there is none). The still is
+  taken by `streamdeck/snap-app` ("Whiteboard Snap.app", built into
+  `~/.local/share/streamdeck/` by `scripts/streamdeck.sh`): macOS denies the
+  camera, without asking, to anything the plugin starts directly, but asks
+  once for an app. It grabs a video frame because the Link fails macOS's
+  still-photo capture.
+- **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave) plus
+  Meeting / Whiteboard / Desk and zoom / pan / tilt dials, which send Insta360
+  Link Controller's global shortcuts. Deliberately a folder off Home rather
+  than a Zoom-triggered profile, so the Astronomer pages stay reachable
+  during calls. The Share Screen monitor is preserved across rescans.
+- **Gridfinity**: dials set X / Y / height, keys toggle label shelf and
+  scoop and generate a bin or baseplate (STL + STEP) onto the Workshop share.
+  The plugin lives in `westbound-workshop/inventory-kiosk/streamdeck-plugin`
+  and reuses the kiosk's CAD engine; `scripts/streamdeck.sh` creates its
+  virtualenv (`uv sync --extra cad --extra deck`) and links it in.
+
+`streamdeck/plugins/com.jonathanleek.launch.sdPlugin` is a small
+standard-library plugin (system Python, no install). It runs the `argv`
+stored in a key (the built-in Open action can't pass a working directory to
+PyCharm), draws the live keys and dials from the sources in `mac.py` and
+`customers.py`, and switches to the Customers profile. A plugin can only
+switch to a profile tagged as its own, so the generator writes that tag
+(`InstalledByPluginUUID` / `PreconfiguredName`) into the Customers
+manifest; folders can't be opened from a plugin at all, hence pages. The
+customer index and visit history are in `~/.local/state/streamdeck-generator/`.
+Its log is `~/Library/Logs/com.jonathanleek.launch.log`; commands' output
+goes to `~/Library/Logs/com.jonathanleek.launch.commands.log`, which is
+where to look if Rescan misbehaves. Tests:
+`/usr/bin/python3 -m unittest discover -s streamdeck/tests`. Settings live in
+`streamdeck/config.json`; the Astronomer logo and other icons in
+`streamdeck/icons/`. Previous profiles are moved to
+`~/.local/state/streamdeck-generator/backups/`, never deleted.
+
+**Manual, once per Mac** (can't be scripted):
+1. System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27): add `Elgato Stream Deck` with **+** and switch it on. Without it every hotkey key shows a yellow caution and sends nothing; the app never asks for it.
+2. Stream Deck app → Marketplace → install **Zoom** by Elgato (needs an Elgato login).
+3. Share Screen targets the BenQ by default (`zoom.share_monitor` in `streamdeck/config.json`). If it shares the wrong screen, click the Share Screen key in the Stream Deck app, pick the monitor, and press Rescan: the choice is read back and applied to both Share keys.
+4. Insta360 Link Controller → ⋯ → Settings → **Hotkeys**: save your framings as scene presets (1 = Meeting, 2 = Whiteboard; the numbering does not follow the thumbnail order), then set these shortcuts and tick **Global Shortcuts** on each row, all with ctrl+option+cmd: Preset 1 `1`, Preset 2 `2`, DeskView `3`, Center gimbal `0`, Enlarge `=`, Zoom out `-`, Gimbal up/down/left/right `I`/`K`/`J`/`L`. Letters, not arrows: ctrl+option+cmd+arrows are Magnet's move-to-display shortcuts. These match `camera` in `streamdeck/config.json`.

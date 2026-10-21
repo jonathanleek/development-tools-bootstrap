@@ -1,0 +1,59 @@
+{
+  "profile_name": "Jonathan",
+  "device_name": "Stream Deck +",
+  "device_model": "20GBD9901",
+  "git_root": "~/Documents/git/astronomer",
+  "customers_dir": "customers",
+  "vault": {
+    "path": "~/Documents/git/astronomer/astronomer-vault",
+    "name": "astronomer-vault",
+    "client_note": "Client Info",
+    "clients_root": "! Clients",
+    "_comment": "Client notes live at <clients_root>/<Active|Inactive>/<Client>/<client_note>.md; the Active/Inactive folder in Obsidian is the source of truth for the deck."
+  },
+  "customer_notes": {
+    "_comment": "customer folder name -> client note folder in the vault, for the ones slug-prefix matching gets wrong"
+  },
+  "apps": {
+    "terminal": "Ghostty",
+    "ide": "PyCharm",
+    "finder": "Finder",
+    "obsidian": "Obsidian"
+  },
+  "kiosk_repo": "~/Documents/git/westbound-workshop/inventory-kiosk",
+  "slack": {
+    "_comment": "Enterprise Grid org ID (E\u2026) for slack:// deep links; the workspace ID (T\u2026) only resolved older channels. Channel IDs come from each client's Client Info note (Slack (internal) / Slack (external) rows, #name or link).",
+    "team": "E0A5WHQCE0P"
+  },
+  "camera": {
+    "_comment": "Insta360 Link Controller global shortcuts (Settings > Hotkeys, Global Shortcuts ticked per row). Every key below is pressed with these modifiers. Gimbal nudges use i/k/j/l, not arrows: ctrl+arrow combos trigger Mission Control even with cmd and option held.",
+    "app": "Insta360 Link Controller",
+    "device": "Insta360 Link",
+    "settle_seconds": 2.5,
+    "modifiers": [
+      "ctrl",
+      "option",
+      "cmd"
+    ],
+    "keys": {
+      "face": "1",
+      "whiteboard": "2",
+      "desk": "3",
+      "center": "0",
+      "zoom_in": "=",
+      "zoom_out": "-",
+      "up": "i",
+      "down": "k",
+      "left": "j",
+      "right": "l"
+    },
+    "presets_comment": "Link Controller preset numbering (verified on the device): Preset 1 = Meeting framing, Preset 2 = Whiteboard framing, regardless of the order the thumbnails show. Deck keys: Meeting -> Preset 1, Whiteboard -> Preset 2, Desk -> DeskView mode."
+  },
+  "zoom": {
+    "_comment": "Share Screen target as the Zoom plugin stores it (pick it once in the app's inspector to see the current value). A choice made in the app on any Share key wins over this on rescan.",
+    "share_monitor": {
+      "DeviceID": 3,
+      "FriendlyName": "BenQ RD280U"
+    }
+  }
+}

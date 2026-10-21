@@ -172,6 +172,13 @@ log "Setting up Claude Code environment..."
   log "Claude env setup incomplete — run scripts/claude-env.sh later"
 
 # ---------------------------------------------------------------------------
+# 15. Stream Deck + (plugins, generated profile, Link Controller login item)
+# ---------------------------------------------------------------------------
+log "Setting up the Stream Deck..."
+"$SCRIPT_DIR/scripts/streamdeck.sh" || \
+  log "Stream Deck setup incomplete — run scripts/streamdeck.sh later"
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 log "Setup complete."
@@ -179,5 +186,7 @@ print -P "%F{yellow}Next steps:%f"
 print "  1. Open a NEW terminal window (so brew/pyenv/prompt load)."
 print "  2. Add any API keys (not in Bitwarden: the Anthropic key, WireGuard)."
 print "  3. Sign into the App Store, then re-run: brew bundle   (Fantastical / Magnet / etc.)"
-print "  4. Manual installs (no cask): MakeMKV (cask disabled), Meshmixer, RevoScan5,"
+print "  4. Stream Deck: install the Zoom plugin from Marketplace, save camera presets and"
+print "     assign the Link Controller shortcuts (README, Stream Deck section)."
+print "  5. Manual installs (no cask): MakeMKV (cask disabled), Meshmixer, RevoScan5,"
 print "     Blueprint Studio, TeamSpeak 5, Reolink, Microsoft Defender, UniFi Protect."
