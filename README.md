@@ -111,7 +111,12 @@ Deck app's profile folder; `scripts/streamdeck.sh` links the plugins and runs
 it. Re-run either after adding a customer folder, a repo, or a client note,
 or press **Rescan** on the deck (it restarts the app, ~5 s).
 
-- **Home**: Astronomer, Meeting, Gridfinity, Rescan. No dials.
+- **Home**: Astronomer, Meeting, Gridfinity, Rescan; **Recent** (the last
+  seven customer pages opened) and a live **containers** key (running
+  OrbStack containers by project; press opens OrbStack, hold 1 s stops them
+  all). Leftmost dial: CPU / GPU / memory, turn for the top CPU and memory
+  processes, press for Activity Monitor. Rightmost dial: active customers,
+  alphabetical from the most recent one; press opens that customer.
 - **Astronomer** walks `~/Documents/git/astronomer` one page per folder down
   to each git repo: Ghostty here, PyCharm, Finder. **Customers** is the union
   of `customers/` folders and the Astronomer vault's `! Clients` notes, and the
@@ -121,7 +126,10 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
   Finder, Slack Internal / External, and its repos. Slack channels come from the client's `Client Info` note —
   rows `Slack (internal)` / `Slack (external)` holding `#channel-name` (looked
   up in `streamdeck/slack-channels.json`; add a line for a new name) or a
-  channel link.
+  channel link. Customer pages live in a second generated profile,
+  **Customers** (page 0 Recent, then one page per customer), which the
+  client keys switch to and Back returns from; on a customer page the
+  rightmost dial turns to the next or previous active customer.
 - **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave) plus
   Meeting / Whiteboard / Desk and zoom / pan / tilt dials, which send Insta360
   Link Controller's global shortcuts. Deliberately a folder off Home rather
@@ -133,11 +141,19 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
   and reuses the kiosk's CAD engine; `scripts/streamdeck.sh` creates its
   virtualenv (`uv sync --extra cad --extra deck`) and links it in.
 
-`streamdeck/plugins/com.jonathanleek.launch.sdPlugin` is a tiny plugin that
-runs the `argv` stored in a key (the built-in Open action can't pass a
-working directory to Ghostty or PyCharm); its commands' output goes to
-`~/Library/Logs/com.jonathanleek.launch.commands.log`, which is where to look
-if Rescan misbehaves. Settings live in
+`streamdeck/plugins/com.jonathanleek.launch.sdPlugin` is a small
+standard-library plugin (system Python, no install). It runs the `argv`
+stored in a key (the built-in Open action can't pass a working directory to
+PyCharm), draws the live keys and dials from the sources in `mac.py` and
+`customers.py`, and switches to the Customers profile. A plugin can only
+switch to a profile tagged as its own, so the generator writes that tag
+(`InstalledByPluginUUID` / `PreconfiguredName`) into the Customers
+manifest; folders can't be opened from a plugin at all, hence pages. The
+customer index and visit history are in `~/.local/state/streamdeck-generator/`.
+Its log is `~/Library/Logs/com.jonathanleek.launch.log`; commands' output
+goes to `~/Library/Logs/com.jonathanleek.launch.commands.log`, which is
+where to look if Rescan misbehaves. Tests:
+`/usr/bin/python3 -m unittest discover -s streamdeck/tests`. Settings live in
 `streamdeck/config.json`; the Astronomer logo and other icons in
 `streamdeck/icons/`. Previous profiles are moved to
 `~/.local/state/streamdeck-generator/backups/`, never deleted.

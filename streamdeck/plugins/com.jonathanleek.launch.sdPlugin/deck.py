@@ -31,6 +31,7 @@ class Ctx:
     device: str
     controller: str  # "Keypad" or "Encoder"
     settings: dict
+    deck: Deck | None = field(default=None, repr=False)  # for sources that switch pages
     state: dict = field(default_factory=dict)
     shown: View | None = None
     due: float = 0.0
@@ -82,6 +83,7 @@ class Deck:
             device=msg.get("device", ""),
             controller=p.get("controller", "Keypad"),
             settings=p.get("settings") or {},
+            deck=self,
             state=self._state.setdefault(msg["context"], {}),
         )
         with self._lock:

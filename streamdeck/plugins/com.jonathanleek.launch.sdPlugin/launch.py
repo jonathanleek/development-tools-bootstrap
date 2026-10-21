@@ -34,6 +34,7 @@ from pathlib import Path
 # run.sh starts us with -I (isolated), which drops this directory from sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import customers  # noqa: E402 - registers its sources
 import mac  # noqa: E402, F401 - registers its sources
 from deck import Ctx, Deck  # noqa: E402
 from sdws import WebSocket  # noqa: E402
@@ -104,7 +105,12 @@ def handle(deck: Deck, msg: dict) -> None:
     event = msg.get("event")
     payload = msg.get("payload", {})
     if event == "willAppear":
-        deck.refresh(deck.appear(msg))
+        ctx = deck.appear(msg)
+        if ctx.action == SWITCH and ctx.settings.get("customer"):
+            customers.visit(ctx.settings["customer"])  # a customer page opened
+        if ctx.source is not None:
+            ctx.source.appear(ctx)
+            deck.refresh(ctx)
     elif event == "willDisappear":
         deck.disappear(msg)
     elif event == "didReceiveSettings":

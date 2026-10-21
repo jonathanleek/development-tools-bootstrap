@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -266,6 +268,91 @@ class MacSourcesTest(Base):
                 self.ws.sent.clear()
                 self.handle(appear(f"k{expect}", launch.STATUS, {"source": "containers"}))
                 self.assertIn(expect, svg(self.ws.events("setImage")[0]))
+
+
+class CustomersTest(Base):
+    INDEX = [
+        {"key": "faire", "label": "Faire", "section": "Active", "footer": "notes + repos", "page": 1},
+        {"key": "moloco", "label": "Moloco", "section": "Active", "footer": "notes", "page": 2},
+        {"key": "athena", "label": "Athena Health", "section": "Active", "footer": "notes", "page": 3},
+        {"key": "doordash", "label": "DoorDash", "section": "Inactive", "footer": "notes", "page": 4},
+    ]
+
+    def setUp(self) -> None:
+        super().setUp()
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        p = mock.patch.object(launch.customers, "STATE", Path(tmp.name))
+        p.start()
+        self.addCleanup(p.stop)
+        launch.customers._index = None
+        (Path(tmp.name) / "customers.json").write_text(json.dumps({"profile": "Customers", "customers": self.INDEX}))
+
+    def strip(self) -> dict:
+        return self.ws.events("setFeedback")[-1]["payload"]
+
+    def turn(self, context: str, ticks: int) -> None:
+        self.handle({"event": "dialRotate", "action": launch.DIAL, "context": context, "payload": {"ticks": ticks}})
+
+    def visit(self, key: str) -> None:
+        """A customer page opening: its Back key appears."""
+        self.handle(appear(f"back-{key}", launch.SWITCH, {"back": True, "customer": key}))
+
+    def test_visits_are_recorded_newest_first(self):
+        for k in ("faire", "moloco", "faire"):
+            self.visit(k)
+        self.assertEqual(launch.customers.recent(), ["faire", "moloco"])
+
+    def test_home_dial_starts_at_most_recent_active_and_goes_alphabetically(self):
+        self.visit("moloco")
+        self.visit("doordash")  # inactive: not on the dial
+        self.handle(appear("d1", launch.DIAL, {"source": "customers"}, "Encoder"))
+        self.assertEqual(self.strip(), {"name": "Moloco", "info": "3 / 3"})
+        self.turn("d1", 1)
+        self.assertEqual(self.strip()["name"], "Athena Health")  # wraps
+        self.turn("d1", 1)
+        self.assertEqual(self.strip()["name"], "Faire")
+        self.assertEqual(self.ws.events("switchToProfile"), [])  # browsing doesn't switch
+        self.handle({"event": "dialDown", "action": launch.DIAL, "context": "d1",
+                     "payload": {"settings": {"source": "customers"}}})
+        self.assertEqual(self.ws.events("switchToProfile")[-1]["payload"], {"profile": "Customers", "page": 1})
+
+    def test_dial_on_customer_page_turns_to_neighbour_page(self):
+        self.handle(appear("d2", launch.DIAL, {"source": "customers", "current": "faire"}, "Encoder"))
+        self.assertEqual(self.strip(), {"name": "Faire", "info": "2 / 3"})
+        self.turn("d2", -1)
+        self.assertEqual(self.ws.events("switchToProfile")[-1]["payload"], {"profile": "Customers", "page": 3})
+
+    def test_dial_on_inactive_page_steps_to_active_neighbours(self):
+        self.handle(appear("d3", launch.DIAL, {"source": "customers", "current": "doordash"}, "Encoder"))
+        self.assertEqual(self.strip(), {"name": "DoorDash", "info": "inactive"})
+        self.turn("d3", 1)
+        self.assertEqual(self.ws.events("switchToProfile")[-1]["payload"]["page"], 1)  # Faire
+        self.handle(appear("d4", launch.DIAL, {"source": "customers", "current": "doordash"}, "Encoder"))
+        self.turn("d4", -1)
+        self.assertEqual(self.ws.events("switchToProfile")[-1]["payload"]["page"], 3)  # Athena Health
+
+    def test_recent_page(self):
+        self.visit("faire")
+        self.visit("doordash")
+        self.handle(appear("r0", launch.STATUS, {"source": "recent", "slot": 0}))
+        self.handle(appear("r1", launch.STATUS, {"source": "recent", "slot": 1}))
+        self.handle(appear("r2", launch.STATUS, {"source": "recent", "slot": 2}))
+        r0, r1, r2 = (svg(m) for m in self.ws.events("setImage"))
+        self.assertIn(">DoorDash<", r0)
+        self.assertIn(">Faire<", r1)
+        self.assertNotIn("<text", r2)  # empty slot
+        self.tap_key({"source": "recent", "slot": 0}, context="r0")
+        self.assertEqual(self.ws.events("switchToProfile")[-1]["payload"], {"profile": "Customers", "page": 4})
+
+    def test_index_reread_after_rescan(self):
+        self.handle(appear("d1", launch.DIAL, {"source": "customers"}, "Encoder"))
+        index = {"profile": "Customers", "customers": [dict(self.INDEX[0], label="Faire Wholesale")]}
+        path = launch.customers.STATE / "customers.json"
+        path.write_text(json.dumps(index))
+        os.utime(path, (1, 1))
+        self.deck.refresh(self.deck.get("d1"))
+        self.assertEqual(self.strip()["name"], "Faire Wholesale")
 
 
 if __name__ == "__main__":

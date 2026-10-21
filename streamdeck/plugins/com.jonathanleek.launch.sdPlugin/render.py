@@ -8,12 +8,15 @@ change with it.
 from __future__ import annotations
 
 import base64
+import re
 from xml.sax.saxutils import escape
 
 TILE = 144
 
 C_BASE = "#1e2227"
 C_REPO = "#1f4f4a"
+C_CUSTOMER = "#5a3d14"
+C_INACTIVE = "#3b3228"
 C_HOME = "#30343a"
 C_ACCENT = "#c7781c"
 C_TEXT = "#f2f2f2"
@@ -23,6 +26,21 @@ C_WARN = "#8a6212"
 C_ERR = "#8a2b22"
 
 FONT = "'Hack Nerd Font', 'Arial', 'Helvetica', sans-serif"
+
+
+def wrap(text: str, max_lines: int = 3) -> list[str]:
+    """generate.py's wrap(): short lines on -, _, space, camelCase."""
+    if len(text) > 12:
+        text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    lines: list[str] = []
+    for w in re.split(r"[-_ ]+", text):
+        if lines and len(lines[-1]) + 1 + len(w) <= 10:
+            lines[-1] += " " + w
+        else:
+            lines.append(w)
+    if len(lines) > max_lines:
+        lines = lines[: max_lines - 1] + [" ".join(lines[max_lines - 1 :])]
+    return lines
 
 
 def tile(lines: list[str], bg: str = C_BASE, footer: str | None = None, fg: str = C_TEXT) -> str:

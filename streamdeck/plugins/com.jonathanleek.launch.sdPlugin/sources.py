@@ -31,6 +31,9 @@ class Source:
     def view(self, ctx: Ctx) -> View:
         raise NotImplementedError
 
+    def appear(self, ctx: Ctx) -> None:
+        """The key came on screen (a page was opened), before it is drawn."""
+
     def press(self, ctx: Ctx) -> None:
         """Key press, or dial press."""
 

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "com.jonathanleek.launch.customer",
+  "items": [
+    {"key": "name", "type": "text", "rect": [6, 10, 188, 44], "value": "", "alignment": "left", "text-overflow": "ellipsis", "font": {"size": 22, "weight": 700}},
+    {"key": "info", "type": "text", "rect": [6, 60, 188, 32], "value": "", "alignment": "left", "color": "#8a919a", "font": {"size": 15, "weight": 600}}
+  ]
+}

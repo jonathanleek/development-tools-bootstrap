@@ -49,7 +49,10 @@ REPO = HERE.parent
 CONFIG = json.loads((HERE / "config.json").read_text())
 SD_SUPPORT = Path.home() / "Library/Application Support/com.elgato.StreamDeck"
 PROFILES_DIR = SD_SUPPORT / "ProfilesV3"
-BACKUPS = Path.home() / ".local/state/streamdeck-generator/backups"
+STATE = Path.home() / ".local/state/streamdeck-generator"
+BACKUPS = STATE / "backups"
+CUSTOMER_INDEX = STATE / "customers.json"  # read by the Launch plugin (customers.py)
+CUSTOMERS_PROFILE = "Customers"
 BUILD = HERE / "build"
 NAMESPACE = uuid.UUID("5c2f0d6e-1b7a-4a4e-9c3e-7a1e6b2c9d41")
 
@@ -267,10 +270,10 @@ def status_dial(source: str, **settings) -> Dial:
     return Dial(STATUS_DIAL_ACTION, LAUNCH_PLUGIN, {"source": source, **settings})
 
 
-def switch_key(image: Image.Image, profile: str | None = None, page: int | None = None) -> Key:
+def switch_key(image: Image.Image, profile: str | None = None, page: int | None = None, **settings) -> Key:
     """Show page `page` of a profile the generator tagged as the plugin's, or
     with no profile go back to the previous profile."""
-    settings: dict = {"profile": profile, "page": page} if profile else {"back": True}
+    settings.update({"profile": profile, "page": page} if profile else {"back": True})
     return Key(SWITCH_ACTION, settings, image, LAUNCH_PLUGIN, "Switch page")
 
 
@@ -481,7 +484,41 @@ def customer_page(profile: Profile, c: Customer) -> Page:
     if c.folder:
         entries += [entry_key(profile, d) for d in subdirs(c.folder)]
     place(profile, page, entries, f"customer:{c.key}")
+    # a top-level page of the Customers profile: Back returns to whichever
+    # profile page opened it, and tells the plugin which customer was visited
+    page.keys[(0, 0)] = switch_key(tile(["Back"], C_FOLDER), customer=c.key)
+    page.dials[3] = status_dial("customers", current=c.key)
     return page
+
+
+def recent_page(profile: Profile) -> Page:
+    """Page 0 of the Customers profile: the customer pages opened most
+    recently, newest first, drawn by the plugin."""
+    page = profile.page("recent", "Recent")
+    page.keys[(0, 0)] = switch_key(tile(["Back"], C_FOLDER))
+    for i, slot in enumerate(SLOTS):
+        page.keys[slot] = status_key("recent", slot=i)
+    page.dials[3] = status_dial("customers")
+    return page
+
+
+class CustomerBook:
+    """The Customers profile: page 0 is Recent, then one top-level page per
+    customer. Top-level pages, not folders, because the Launch plugin can
+    switch to a page of a profile tagged as its own but cannot open a folder;
+    that is what lets the dial and Recent jump straight to a customer."""
+
+    def __init__(self) -> None:
+        self.profile = Profile()
+        self.pages: list[Page] = [recent_page(self.profile)]
+        self.index: list[dict] = []
+
+    def add(self, c: Customer) -> int:
+        """Build c's page; returns its page number in the profile."""
+        n = len(self.pages)
+        self.pages.append(customer_page(self.profile, c))
+        self.index.append({"key": c.key, "label": c.label, "section": c.section, "footer": c.footer, "page": n})
+        return n
 
 
 def customers(path: Path) -> tuple[list[Customer], list[Customer]]:
@@ -507,33 +544,33 @@ def customers(path: Path) -> tuple[list[Customer], list[Customer]]:
     return [c for c in out if c.section == "Active"], [c for c in out if c.section == "Inactive"]
 
 
-def customer_key(profile: Profile, c: Customer) -> Key:
+def customer_key(book: CustomerBook, c: Customer) -> Key:
     bg = C_CUSTOMER if c.section == "Active" else C_INACTIVE
-    return folder_key(customer_page(profile, c), tile(wrap(c.label), bg, footer=c.footer))
+    return switch_key(tile(wrap(c.label), bg, footer=c.footer), CUSTOMERS_PROFILE, book.add(c))
 
 
-def customers_page(profile: Profile, path: Path) -> Page:
+def customers_page(profile: Profile, book: CustomerBook, path: Path) -> Page:
     """Active customers, then Inactive ▸ as the very last entry so it lands on
     the last page rather than spending a key up front."""
     page = profile.page(f"customers:{path}", "Customers")
     active, inactive = customers(path)
-    entries = [customer_key(profile, c) for c in active]
+    entries = [customer_key(book, c) for c in active]
     if inactive:
         inactive_page = profile.page(f"customers-inactive:{path}", "Inactive customers")
-        place(profile, inactive_page, [customer_key(profile, c) for c in inactive], f"customers-inactive:{path}")
+        place(profile, inactive_page, [customer_key(book, c) for c in inactive], f"customers-inactive:{path}")
         entries.append(folder_key(inactive_page, tile(["Inactive ▸"], C_FOLDER, footer=f"{len(inactive)} customers")))
     place(profile, page, entries, f"customers:{path}")
     return page
 
 
-def astronomer_page(profile: Profile) -> Page:
+def astronomer_page(profile: Profile, book: CustomerBook) -> Page:
     root = expand(CONFIG["git_root"])
     vault_path = expand(CONFIG["vault"]["path"])
     page = profile.page(f"astronomer:{root}", "Astronomer")
     entries: list[Key] = []
     for c in subdirs(root):
         if c.name == CONFIG["customers_dir"]:
-            entries.append(folder_key(customers_page(profile, c), tile(["Customers"], C_CUSTOMER)))
+            entries.append(folder_key(customers_page(profile, book, c), tile(["Customers"], C_CUSTOMER)))
         elif c == vault_path:
             entries.append(obsidian_key(CONFIG["vault"]["name"], None, ["Vault"]))
         else:
@@ -639,13 +676,13 @@ def meeting_page(profile: Profile) -> Page:
     return page
 
 
-def home_page(profile: Profile) -> Page:
+def home_page(profile: Profile, book: CustomerBook) -> Page:
     home = profile.page("home", "Home")
     try:
         astro_tile = logo_tile("astronomer-mark", C_HOME)
     except FileNotFoundError:
         astro_tile = tile(["Astro-", "nomer"], C_HOME)
-    home.keys[(0, 0)] = folder_key(astronomer_page(profile), astro_tile)
+    home.keys[(0, 0)] = folder_key(astronomer_page(profile, book), astro_tile)
     home.keys[(1, 0)] = folder_key(meeting_page(profile), tile(["Meeting"], C_HOME, app_icon("zoom.us")))
     home.keys[(2, 0)] = folder_key(gridfinity_page(profile), tile(["Gridfinity"], C_ACCENT))
     home.keys[(3, 0)] = launch_key(
@@ -653,10 +690,12 @@ def home_page(profile: Profile) -> Page:
         tile(["Rescan"], C_HOME, footer="navigator"),
         cwd=str(REPO),
     )
-    # live, drawn by the Launch plugin (mac.py); the rightmost dial is kept
-    # for the active-customers dial, the easiest one to reach
+    home.keys[(0, 1)] = switch_key(tile(["Recent"], C_CUSTOMER, footer="customers"), CUSTOMERS_PROFILE, 0)
+    # live, drawn by the Launch plugin (mac.py, customers.py); the active
+    # customers get the rightmost dial, the easiest one to reach
     home.keys[(2, 1)] = status_key("containers", argv=["/usr/bin/open", "-a", "OrbStack"])
     home.dials[0] = status_dial("load", argv=["/usr/bin/open", "-a", "Activity Monitor"])
+    home.dials[3] = status_dial("customers")
     return home
 
 
@@ -743,13 +782,18 @@ def dial_json(page: Page, col: int, d: Dial) -> dict:
 
 @dataclass
 class Target:
-    """One .sdProfile to write: the main profile, or the Zoom-triggered one."""
+    """One .sdProfile to write: the main profile, or the Customers one."""
 
     key: str  # page_uuid(key) is the profile UUID
     name: str
     profile: Profile
-    home: Page
+    top: list[Page]  # the profile's pages; every other page is a folder below them
     app_identifier: str | None = None
+    # Tag the profile as this plugin's (InstalledByPluginUUID +
+    # PreconfiguredName, fields the app sets on profiles a plugin installs).
+    # The plugin's switchToProfile only reaches tagged profiles; writing the
+    # tag ourselves needs no import or prompt (verified on app 7.6.0).
+    plugin: str | None = None
 
     @property
     def uuid(self) -> str:
@@ -774,11 +818,14 @@ def emit(t: Target, dev_uuid: str, model: str) -> None:
     manifest: dict = {
         "Device": {"Model": model, "UUID": dev_uuid},
         "Name": t.name,
-        "Pages": {"Current": t.home.id, "Default": blank, "Pages": [t.home.id]},
+        "Pages": {"Current": t.top[0].id, "Default": blank, "Pages": [p.id for p in t.top]},
         "Version": "3.0",
     }
     if t.app_identifier:
         manifest["AppIdentifier"] = t.app_identifier
+    if t.plugin:
+        manifest["InstalledByPluginUUID"] = t.plugin
+        manifest["PreconfiguredName"] = t.name
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
     bdir = out / "Profiles" / blank.upper()
     (bdir / "Images").mkdir(parents=True)
@@ -818,14 +865,19 @@ def load_sticky(targets: list[Target]) -> None:
 
 def build() -> tuple[list[Target], str]:
     main = Profile()
-    home = home_page(main)
-    targets = [Target("profile", CONFIG["profile_name"], main, home)]
+    book = CustomerBook()
+    home = home_page(main, book)
+    targets = [
+        Target("profile", CONFIG["profile_name"], main, [home]),
+        Target("customers", CUSTOMERS_PROFILE, book.profile, book.pages, plugin=LAUNCH_PLUGIN["UUID"]),
+    ]
     load_sticky(targets)
     dev_uuid, model = device()
     if BUILD.exists():
         shutil.rmtree(BUILD)
     for t in targets:
         emit(t, dev_uuid, model)
+    (BUILD / "customers.json").write_text(json.dumps({"profile": CUSTOMERS_PROFILE, "customers": book.index}, indent=1))
     return targets, dev_uuid
 
 
@@ -849,6 +901,8 @@ def install(targets: list[Target], dev_uuid: str, set_default: bool) -> None:
             print(f"moved previous profile to {dest}")
         shutil.copytree(t.built, t.installed)
         print(f"installed {t.installed.name} ({t.name})")
+    STATE.mkdir(parents=True, exist_ok=True)
+    shutil.copy(BUILD / "customers.json", CUSTOMER_INDEX)
     if set_default:
         raw = subprocess.run(["defaults", "export", "com.elgato.StreamDeck", "-"], check=True, capture_output=True).stdout
         prefs = plistlib.loads(raw)
