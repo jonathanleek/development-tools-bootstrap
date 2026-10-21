@@ -135,9 +135,17 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
   a title (default *Sync*) and creates `YYYY.MM.DD - <Title>.md` in the
   client's `notes/` folder with Notes / Actions headings, or opens it if it
   exists. **Call ▸** is that customer's meeting page: Zoom keys, Call note,
-  Client Info, internal Slack, and a camera dial (turn for Meeting /
-  Whiteboard framing, press to switch; the plugin posts Link Controller's
-  shortcut).
+  **Snap**, internal Slack, and a camera dial (turn for Meeting / Whiteboard
+  framing, press to switch; the plugin posts Link Controller's shortcut).
+  Snap turns the camera to Whiteboard framing (whiteboard mode), takes a
+  still, turns back to Meeting, and puts the photo in the vault's `Images/`,
+  on the clipboard, and at the end of the Notes section of today's call
+  note (creating `YYYY.MM.DD - Sync.md` if there is none). The still is
+  taken by `streamdeck/snap-app` ("Whiteboard Snap.app", built into
+  `~/.local/share/streamdeck/` by `scripts/streamdeck.sh`): macOS denies the
+  camera, without asking, to anything the plugin starts directly, but asks
+  once for an app. It grabs a video frame because the Link fails macOS's
+  still-photo capture.
 - **Meeting**: Zoom plugin keys (mute, video, share the BenQ, leave) plus
   Meeting / Whiteboard / Desk and zoom / pan / tilt dials, which send Insta360
   Link Controller's global shortcuts. Deliberately a folder off Home rather

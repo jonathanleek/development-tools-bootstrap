@@ -46,7 +46,15 @@ else
   print "Gridfinity: $KIOSK not cloned; skipping that plugin (re-run after cloning)"
 fi
 
-# 3. Link Controller runs at login so its global camera shortcuts work
+# 3. Whiteboard Snap.app: takes the deck's whiteboard stills (needs swiftc,
+#    from the Xcode command line tools)
+if command -v swiftc >/dev/null; then
+  "$REPO/streamdeck/snap-app/build.sh"
+else
+  print "Whiteboard Snap: swiftc not found (xcode-select --install); the Snap key won't work" >&2
+fi
+
+# 4. Link Controller runs at login so its global camera shortcuts work
 if [[ -d "$LINK_CONTROLLER" ]]; then
   if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "Insta360 Link Controller"; then
     osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$LINK_CONTROLLER\", hidden:true}" >/dev/null
@@ -56,7 +64,7 @@ if [[ -d "$LINK_CONTROLLER" ]]; then
   fi
 fi
 
-# 4. Generate and install the profile. Needs the device to have been seen by
+# 5. Generate and install the profile. Needs the device to have been seen by
 #    the app once (its UUID comes from the app's preferences).
 if defaults read com.elgato.StreamDeck Devices 2>/dev/null | grep -q 'DeviceName = "Stream Deck +"'; then
   uv run --quiet "$REPO/streamdeck/generate.py" --install --restart --set-default

@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins/com.jonath
 
 import launch  # noqa: E402
 import notes  # noqa: E402
+import whiteboard  # noqa: E402
 import render  # noqa: E402
 from deck import Deck  # noqa: E402
 from sources import SOURCES, Source, View  # noqa: E402
@@ -426,6 +427,31 @@ class NotesTest(unittest.TestCase):
         os.utime(first, (1, 1))
         notes.create(self.client, "Old", launch.customers.dt.date(2026, 10, 19))
         self.assertEqual(notes.today_note(self.client, self.DAY), second)
+
+
+class WhiteboardEmbedTest(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.note = Path(tmp.name) / "note.md"
+
+    def test_snaps_stack_at_end_of_notes_section(self):
+        self.note.write_text(notes.SKELETON)
+        whiteboard.embed(self.note, "a.png")
+        whiteboard.embed(self.note, "b.png")
+        self.assertEqual(self.note.read_text(),
+                         "## Notes\n\n![[a.png]]\n\n![[b.png]]\n\n\n\n## Actions\n\n- [ ] \n")
+
+    def test_after_existing_notes_text(self):
+        self.note.write_text("## Notes\n\n- they use Snowflake\n\n## Actions\n- [ ] follow up\n")
+        whiteboard.embed(self.note, "a.png")
+        self.assertEqual(self.note.read_text(),
+                         "## Notes\n\n- they use Snowflake\n\n![[a.png]]\n\n## Actions\n- [ ] follow up\n")
+
+    def test_note_without_notes_heading_gets_it_appended(self):
+        self.note.write_text("freeform text\n")
+        whiteboard.embed(self.note, "a.png")
+        self.assertEqual(self.note.read_text(), "freeform text\n\n![[a.png]]\n")
 
 
 if __name__ == "__main__":

@@ -54,6 +54,7 @@ BACKUPS = STATE / "backups"
 CUSTOMER_INDEX = STATE / "customers.json"  # read by the Launch plugin (customers.py)
 CUSTOMERS_PROFILE = "Customers"
 NOTES_PY = HERE / "plugins/com.jonathanleek.launch.sdPlugin/notes.py"
+WHITEBOARD_PY = HERE / "plugins/com.jonathanleek.launch.sdPlugin/whiteboard.py"
 BUILD = HERE / "build"
 NAMESPACE = uuid.UUID("5c2f0d6e-1b7a-4a4e-9c3e-7a1e6b2c9d41")
 
@@ -710,10 +711,23 @@ def camera_dial() -> Dial:
     return status_dial("camera", modes=modes)
 
 
+def snap_key(c: Customer) -> Key:
+    """Whiteboard framing, a still, back to Meeting framing; the photo goes
+    into the vault's Images/ and today's call note (whiteboard.py)."""
+    cam = CONFIG["camera"]
+    argv = [
+        "/usr/bin/python3", "-I", str(WHITEBOARD_PY), str(c.vault_dir), str(expand(CONFIG["vault"]["path"]) / "Images"),
+        "--device", cam["device"], "--board", str(VK[cam["keys"]["whiteboard"]]),
+        "--meeting", str(VK[cam["keys"]["face"]]), "--mods", ",".join(cam["modifiers"]),
+        "--settle", str(cam["settle_seconds"]),
+    ]
+    return launch_key(argv, tile(["Snap"], C_BASE, app_icon(cam["app"]), footer="whiteboard"))
+
+
 def customer_meeting_page(profile: Profile, c: Customer) -> Page:
-    """Meeting, for one customer: Zoom, that customer's call note and
-    internal Slack channel, and the camera framings on the rightmost dial. No
-    volume or camera zoom / pan / tilt dials here, by choice."""
+    """Meeting, for one customer: Zoom, that customer's call note, whiteboard
+    snap and internal Slack channel, and the camera framings on the rightmost
+    dial. No volume or camera zoom / pan / tilt dials here, by choice."""
     page = profile.page(f"customer-meeting:{c.key}", f"{c.label} call")
     page.keys[(0, 0)] = back()
     page.keys[(1, 0)] = zoom_key("mute", 2)
@@ -721,8 +735,8 @@ def customer_meeting_page(profile: Profile, c: Customer) -> Page:
     page.keys[(3, 0)] = zoom_key("screenshare", 2)
     if c.vault_dir:
         page.keys[(0, 1)] = call_note_key(c)
-    if c.note:  # until the whiteboard snap takes this key
-        page.keys[(1, 1)] = obsidian_key(CONFIG["vault"]["name"], c.note, ["Client", "Info"])
+    if c.vault_dir:
+        page.keys[(1, 1)] = snap_key(c)
     internal = slack_channels(c).get("internal")
     if internal:
         page.keys[(2, 1)] = slack_key(internal, "Internal")

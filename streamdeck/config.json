@@ -28,6 +28,8 @@
   "camera": {
     "_comment": "Insta360 Link Controller global shortcuts (Settings > Hotkeys, Global Shortcuts ticked per row). Every key below is pressed with these modifiers. Gimbal nudges use i/k/j/l, not arrows: ctrl+arrow combos trigger Mission Control even with cmd and option held.",
     "app": "Insta360 Link Controller",
+    "device": "Insta360 Link",
+    "settle_seconds": 2.5,
     "modifiers": [
       "ctrl",
       "option",
