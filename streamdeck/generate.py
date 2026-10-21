@@ -278,9 +278,11 @@ def open_in(app: str, target: str, label: str, extra: list[str] | None = None) -
 
 
 def ghostty_key(path: Path) -> Key:
+    # Hand the folder to the running Ghostty, which opens a window there. Not
+    # `open -na ... --args --working-directory=`: that starts another Ghostty
+    # whose restored windows win and the folder is ignored (Ghostty 1.3).
     app = CONFIG["apps"]["terminal"]
-    argv = ["/usr/bin/open", "-na", f"{app}.app", "--args", f"--working-directory={path}"]
-    return launch_key(argv, tile([app], C_BASE, app_icon(app)))
+    return launch_key(["/usr/bin/open", "-a", app, str(path)], tile([app], C_BASE, app_icon(app)))
 
 
 def ide_key(path: Path) -> Key:
