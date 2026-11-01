@@ -8,6 +8,7 @@ Runs on the system Python, like the plugin itself.
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
 import os
 import sys
@@ -459,6 +460,37 @@ class WhiteboardEmbedTest(unittest.TestCase):
         self.note.write_text("freeform text\n")
         whiteboard.embed(self.note, "a.png")
         self.assertEqual(self.note.read_text(), "freeform text\n\n![[a.png]]\n")
+
+
+_spec = importlib.util.spec_from_file_location("link_hotkeys", Path(__file__).resolve().parents[1] / "link-hotkeys.py")
+link_hotkeys = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(link_hotkeys)
+
+
+class LinkHotkeysTest(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.ini = Path(tmp.name) / "startup.ini"
+
+    def test_fresh_file_gets_the_shortcuts(self) -> None:
+        self.assertTrue(link_hotkeys.merge(self.ini))
+        text = self.ini.read_text()
+        self.assertIn("PresetPosition2=Control + Option + Command + 2", text)
+        self.assertIn("enable_global_hotkey=true", text)
+        self.assertFalse(link_hotkeys.merge(self.ini))  # second run: nothing to do
+
+    def test_keeps_the_rest_and_fixes_drift(self) -> None:
+        self.ini.write_text("[General]\nenable_global_hotkey=false\nui_color_mode=0\n\n"
+                            "[HotKey]\nZoomIn=Ctrl + X\n\n[Token]\nabc=123\n")
+        self.assertTrue(link_hotkeys.merge(self.ini, write=False))
+        self.assertIn("ZoomIn=Ctrl + X", self.ini.read_text())  # check mode wrote nothing
+        link_hotkeys.merge(self.ini)
+        text = self.ini.read_text()
+        self.assertIn("ZoomIn=Control + Option + Command + +", text)
+        self.assertIn("enable_global_hotkey=true", text)
+        self.assertIn("ui_color_mode=0", text)
+        self.assertIn("abc=123", text)
 
 
 if __name__ == "__main__":

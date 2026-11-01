@@ -10,7 +10,8 @@
 
 Pages are derived, not hand-placed:
 
-- Home: Astronomer, Meeting, Gridfinity, Rescan; a live containers key and
+- Home: Astronomer, Meeting, Gridfinity (only where its plugin is linked),
+  Rescan; a live containers key and
   the load dial (CPU / GPU / memory), both drawn by the Launch plugin.
 - Astronomer: walks ~/Documents/git/astronomer one page per folder. A folder
   that is a git repo gets a repo page (Ghostty here, PyCharm, Finder). The
@@ -65,6 +66,7 @@ STATUS_DIAL_ACTION = "com.jonathanleek.launch.dial"
 SWITCH_ACTION = "com.jonathanleek.launch.switch"
 GRIDFINITY_PLUGIN = {"Name": "Gridfinity", "UUID": "com.westboundworkshop.gridfinity", "Version": "0.1.0"}
 GF = "com.westboundworkshop.gridfinity"
+GF_LINKED = SD_SUPPORT / "Plugins" / f"{GF}.sdPlugin"  # linked by scripts/streamdeck.sh when the kiosk repo is cloned
 
 TILE = 144
 SLOTS = [(1, 0), (2, 0), (3, 0), (0, 1), (1, 1), (2, 1), (3, 1)]  # after Back at (0,0)
@@ -771,7 +773,8 @@ def home_page(profile: Profile, book: CustomerBook) -> Page:
         astro_tile = tile(["Astro-", "nomer"], C_HOME)
     home.keys[(0, 0)] = folder_key(astronomer_page(profile, book), astro_tile)
     home.keys[(1, 0)] = folder_key(meeting_page(profile), tile(["Meeting"], C_HOME, app_icon("zoom.us")))
-    home.keys[(2, 0)] = folder_key(gridfinity_page(profile), tile(["Gridfinity"], C_ACCENT))
+    if GF_LINKED.exists():  # not every Mac has the kiosk repo
+        home.keys[(2, 0)] = folder_key(gridfinity_page(profile), tile(["Gridfinity"], C_ACCENT))
     home.keys[(3, 0)] = launch_key(
         ["/opt/homebrew/bin/uv", "run", "--quiet", str(HERE / "generate.py"), "--install", "--restart"],
         tile(["Rescan"], C_HOME, footer="navigator"),

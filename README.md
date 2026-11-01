@@ -111,7 +111,8 @@ Deck app's profile folder; `scripts/streamdeck.sh` links the plugins and runs
 it. Re-run either after adding a customer folder, a repo, or a client note,
 or press **Rescan** on the deck (it restarts the app, ~5 s).
 
-- **Home**: Astronomer, Meeting, Gridfinity, Rescan; **Recent** (the last
+- **Home**: Astronomer, Meeting, Gridfinity (only on a Mac with the kiosk
+  repo cloned), Rescan; **Recent** (the last
   seven customer pages opened) and a live **containers** key (running
   OrbStack containers by project; press opens OrbStack, hold 1 s stops them
   all). Leftmost dial: CPU / GPU / memory, turn for the top CPU and memory
@@ -151,7 +152,7 @@ or press **Rescan** on the deck (it restarts the app, ~5 s).
   Link Controller's global shortcuts. Deliberately a folder off Home rather
   than a Zoom-triggered profile, so the Astronomer pages stay reachable
   during calls. The Share Screen monitor is preserved across rescans.
-- **Gridfinity**: dials set X / Y / height, keys toggle label shelf and
+- **Gridfinity** (optional; left out when the plugin isn't linked): dials set X / Y / height, keys toggle label shelf and
   scoop and generate a bin or baseplate (STL + STEP) onto the Workshop share.
   The plugin lives in `westbound-workshop/inventory-kiosk/streamdeck-plugin`
   and reuses the kiosk's CAD engine; `scripts/streamdeck.sh` creates its
@@ -177,7 +178,8 @@ where to look if Rescan misbehaves. Tests:
 **Manual, once per Mac** (can't be scripted):
 1. System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27): add `Elgato Stream Deck` with **+** and switch it on. Without it every hotkey key shows a yellow caution and sends nothing; the app never asks for it.
 2. Stream Deck app → Marketplace → install **Zoom** by Elgato (needs an Elgato login).
-3. Share Screen targets the BenQ by default (`zoom.share_monitor` in `streamdeck/config.json`). If it shares the wrong screen, click the Share Screen key in the Stream Deck app, pick the monitor, and press Rescan: the choice is read back and applied to both Share keys.
-4. Insta360 Link Controller → ⋯ → Settings → **Hotkeys**: save your framings as scene presets (1 = Meeting, 2 = Whiteboard; the numbering does not follow the thumbnail order), then set these shortcuts and tick **Global Shortcuts** on each row, all with ctrl+option+cmd: Preset 1 `1`, Preset 2 `2`, DeskView `3`, Center gimbal `0`, Enlarge `=`, Zoom out `-`, Gimbal up/down/left/right `I`/`K`/`J`/`L`. Letters, not arrows: ctrl+option+cmd+arrows are Magnet's move-to-display shortcuts. These match `camera` in `streamdeck/config.json`.
-5. Obsidian (Astronomer vault) → Settings → Community plugins → install and enable **Advanced URI**. The deck's Client Info and Call note keys use it to reveal the note in the file explorer (plain `obsidian://` links can't run a command); without it Client Info keys do nothing.
-6. First **Snap** press: allow **Whiteboard Snap** to use the camera.
+3. Share Screen targets the BenQ by default (`zoom.share_monitor` in `streamdeck/config.json`; its `DeviceID` can differ on another Mac). If it shares the wrong screen, click the Share Screen key in the Stream Deck app, pick the monitor, and press Rescan: the choice is read back and applied to both Share keys.
+4. Insta360 Link Controller: save your framings as scene presets, 1 = Meeting and 2 = Whiteboard (the numbering does not follow the thumbnail order; a camera that already has them keeps them). The global shortcuts themselves (all ctrl+option+cmd: Preset 1 `1`, Preset 2 `2`, DeskView `3`, Center gimbal `0`, Enlarge `=`, Zoom out `-`, Gimbal up/down/left/right `I`/`K`/`J`/`L`; letters, not arrows, because ctrl+option+cmd+arrows are Magnet's move-to-display shortcuts) are set by `scripts/streamdeck.sh` from `streamdeck/link-controller-hotkeys.ini`, merged into the app's `startup.ini` by `streamdeck/link-hotkeys.py`; only those sections are kept in git, since the rest of that file holds login tokens. They match `camera` in `streamdeck/config.json`. After changing them in the app, copy the `[HotKey]` / `[HotKeyEnabled]` sections back into the repo file.
+5. First **Snap** press: allow **Whiteboard Snap** to use the camera.
+
+The Advanced URI plugin, which the Client Info and Call note keys use to reveal the note in Obsidian's file explorer, is committed in the vault's `.obsidian/`, so cloning the vault brings it; Obsidian asks once whether to trust the vault's plugins (say yes).

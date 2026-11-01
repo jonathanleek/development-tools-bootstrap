@@ -3,8 +3,7 @@
 # profile from disk, make it the device default. Re-runnable.
 #
 # What this can't do (see README "Stream Deck"): install the Zoom plugin
-# (Marketplace needs your Elgato login), save camera presets, or assign the
-# Link Controller shortcuts.
+# (Marketplace needs your Elgato login) or save camera presets.
 set -euo pipefail
 
 REPO="${0:A:h:h}"
@@ -54,8 +53,23 @@ else
   print "Whiteboard Snap: swiftc not found (xcode-select --install); the Snap key won't work" >&2
 fi
 
-# 4. Link Controller runs at login so its global camera shortcuts work
+# 4. Link Controller: the deck's camera shortcuts (streamdeck/
+#    link-controller-hotkeys.ini), and it runs at login so they work. The
+#    app rewrites its settings when it quits, so it's quit to apply them.
 if [[ -d "$LINK_CONTROLLER" ]]; then
+  if /usr/bin/python3 "$REPO/streamdeck/link-hotkeys.py" --check; then
+    print "ok:     Link Controller shortcuts"
+  else
+    running=0
+    if pgrep -xq "Insta360 Link Controller"; then
+      running=1
+      osascript -e 'quit app "Insta360 Link Controller"'
+      while pgrep -xq "Insta360 Link Controller"; do sleep 0.5; done
+    fi
+    /usr/bin/python3 "$REPO/streamdeck/link-hotkeys.py" >/dev/null
+    print "set:    Link Controller shortcuts"
+    (( running )) && open -g -j "$LINK_CONTROLLER"
+  fi
   if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "Insta360 Link Controller"; then
     osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$LINK_CONTROLLER\", hidden:true}" >/dev/null
     print "added:  Insta360 Link Controller to login items"
